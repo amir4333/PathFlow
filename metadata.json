@@ -1,0 +1,6 @@
+{
+  "name": "PathFlow",
+  "description": "Offline-First personal system for managing long-term goals, roadmaps, tasks, sessions, and progress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
