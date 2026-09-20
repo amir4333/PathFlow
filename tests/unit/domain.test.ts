@@ -231,16 +231,20 @@ test('Weekly Plan: References Task without duplication and validates planned ite
   assert.equal(planItem.taskId, taskId);
   assert.equal(planItem.plannedMinutes, 60);
   assert.equal(planItem.isCompleted, false);
+  assert.ok(isValidEntityId(planItem.weeklyPlanId));
 
   const plan = createWeeklyPlan({
     weekIdentifier: '2026-W38',
     title: 'Sprint 38 Commitments',
+    targetMinutes: 180,
     items: [planItem],
   });
 
   assert.equal(plan.weekIdentifier, '2026-W38');
+  assert.equal(plan.targetMinutes, 180);
   assert.equal(plan.items.length, 1);
   assert.equal(plan.items[0].taskId, taskId);
+  assert.equal(plan.items[0].weeklyPlanId, plan.id, 'createWeeklyPlan assigns plan ID to child items');
 
   const planValidation = validateWeeklyPlan(plan);
   assert.equal(planValidation.isValid, true);
@@ -253,6 +257,15 @@ test('Weekly Plan: References Task without duplication and validates planned ite
   const itemValidation = validateWeeklyPlanItem(invalidItem);
   assert.equal(itemValidation.isValid, false);
   assert.ok(itemValidation.errors.some((e) => e.includes('negative')));
+
+  // Invalid plan with negative targetMinutes
+  const negativeTargetPlan = {
+    ...plan,
+    targetMinutes: -60,
+  };
+  const negativeTargetValidation = validateWeeklyPlan(negativeTargetPlan);
+  assert.equal(negativeTargetValidation.isValid, false);
+  assert.ok(negativeTargetValidation.errors.some((e) => e.includes('targetMinutes')));
 });
 
 test('Progress Service: Deterministic calculation across tasks and edge cases', () => {

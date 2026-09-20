@@ -58,9 +58,9 @@ The system is partitioned into five distinct architectural layers:
 * **Status**: **Implemented (Phase 2)**. Core entity models (Goal, Roadmap, Task, Session, WeeklyPlan), validation rules, lifecycle state transitions, and pure progress calculation services are established in pure TypeScript. See `docs/domain-model.md` for full specification.
 
 ### 4. Data Layer (`src/data/`)
-* **Role**: Mediates data storage through the Repository pattern. Divided into `local/` (target: IndexedDB for offline persistence), `remote/` (future API client), and `repositories/` (contract interfaces).
+* **Role**: Mediates data storage through the Repository pattern. Divided into `local/` (IndexedDB via Dexie.js for offline persistence), `remote/` (future API client), and `repositories/` (contract interfaces and local implementations).
 * **Rule**: Repositories provide unified interfaces so domain logic remains agnostic to whether storage is local IndexedDB or a mock during unit tests.
-* **Status**: **Conceptual Structure / Placeholder for Phase 2 & 3**.
+* **Status**: **Implemented (Phase 3)**. Local Dexie-backed database (`PathFlowDB`), repository interfaces, and full CRUD/query implementations for Goal, Roadmap, Task, Session, WeeklyPlan, and WeeklyPlanItem are active. See `docs/persistence.md` for details.
 
 ### 5. Sync Layer (`src/sync/`)
 * **Role**: Handles durable mutation queuing, background incremental delta synchronization, and conflict resolution (e.g., Last-Write-Wins / Lamport timestamps) across multiple devices.
@@ -80,14 +80,14 @@ The system is partitioned into five distinct architectural layers:
 
 ## Current Status vs. Future Phases
 
-| Layer | Component | Status in Phase 1 | Planned Target Phase |
+| Layer | Component | Status | Target Phase |
 | :--- | :--- | :--- | :--- |
 | **Presentation** | AppShell & Navigation | **Implemented** | Phase 1 Foundation |
-| **Presentation** | Feature View Shells | **Implemented (Placeholders)** | Phase 2–4 |
+| **Presentation** | Feature View Shells | **Implemented (Placeholders)** | Phase 1 & Phase 5 |
 | **Application** | Router & App Config | **Implemented** | Phase 1 Foundation |
 | **Domain** | Models (Goals, Tasks, etc.) | **Implemented** | Phase 2 |
 | **Domain** | Services & Invariant Rules | **Implemented** | Phase 2 |
-| **Data** | Local IndexedDB Adapter | Conceptual Directory | Phase 2 & 3 |
-| **Data** | Remote API & Repositories | Conceptual Directory | Phase 2 & 4 |
+| **Data** | Local IndexedDB Storage & Repositories | **Implemented** | Phase 3 |
+| **Data** | Remote API & Repositories | Conceptual Directory | Phase 4 |
 | **Sync** | Queue, Engine, Conflict | Conceptual Directory | Phase 4 |
 | **Backend** | PostgreSQL & Sync Server | Conceptual Directory | Phase 4+ |

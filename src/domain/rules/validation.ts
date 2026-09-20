@@ -180,6 +180,10 @@ export function validateWeeklyPlanItem(item: WeeklyPlanItem): ValidationResult {
     errors.push('Weekly plan item ID must be a valid non-empty identifier.');
   }
 
+  if (!isValidEntityId(item.weeklyPlanId)) {
+    errors.push('Weekly plan item must reference a valid WeeklyPlan ID (weeklyPlanId).');
+  }
+
   if (!isValidEntityId(item.taskId)) {
     errors.push('Weekly plan item must reference a valid Task ID (taskId).');
   }
@@ -209,6 +213,10 @@ export function validateWeeklyPlan(plan: WeeklyPlan): ValidationResult {
     errors.push('Weekly plan weekIdentifier is required (e.g., "2026-W38").');
   }
 
+  if (typeof plan.targetMinutes !== 'number' || isNaN(plan.targetMinutes) || plan.targetMinutes < 0) {
+    errors.push('Weekly plan targetMinutes must be a non-negative number.');
+  }
+
   if (!isValidTimestamp(plan.createdAt)) {
     errors.push('Weekly plan createdAt must be a valid ISO timestamp.');
   }
@@ -221,6 +229,8 @@ export function validateWeeklyPlan(plan: WeeklyPlan): ValidationResult {
     const itemResult = validateWeeklyPlanItem(item);
     if (!itemResult.isValid) {
       errors.push(`Item at index ${index} is invalid: ${itemResult.errors.join('; ')}`);
+    } else if (item.weeklyPlanId !== plan.id) {
+      errors.push(`Item at index ${index} references weeklyPlanId "${item.weeklyPlanId}" which does not match parent plan ID "${plan.id}".`);
     }
   });
 

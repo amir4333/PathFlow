@@ -59,11 +59,13 @@ Represents tactical time and task allocation for a specific week.
   * `id: EntityId` — Unique identifier.
   * `weekIdentifier: string` — ISO week format (e.g., `'2026-W38'`).
   * `title: string` — Friendly week title.
+  * `targetMinutes: number` — Non-negative target commitment for the week.
   * `items: WeeklyPlanItem[]` — Collection of planned allocations.
   * `createdAt: Timestamp`
   * `updatedAt: Timestamp`
 * **WeeklyPlanItem Fields**:
   * `id: EntityId`
+  * `weeklyPlanId: EntityId` — ID reference to the parent WeeklyPlan.
   * `taskId: EntityId` — References an existing Task by ID (no Task data duplication).
   * `targetDate: string` — ISO calendar date (e.g., `'2026-09-21'`).
   * `plannedMinutes: number` — Non-negative planned duration.

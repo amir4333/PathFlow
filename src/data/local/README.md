@@ -1,9 +1,9 @@
 # Data Layer — Local
 
-This directory will contain the offline-first local persistence implementation.
+This directory contains the offline-first local persistence implementation backed by Dexie.js and IndexedDB.
 
 ## Architectural Guidelines
-* **Target Storage**: IndexedDB (using a lightweight wrapper such as `idb` or Dexie when introduced in Phase 2/3).
+* **Target Storage**: IndexedDB via Dexie.js (`PathFlowDB`).
 * **Local-First Principle**: All user write operations commit locally first, providing immediate feedback regardless of network state.
-* **Schema Evolution**: Local database migrations and table definitions will reside here.
-* **Phase Status**: Placeholder for Phase 2/3 local persistence implementation.
+* **Schema Evolution**: Version 1 schema and stores are defined in `schema.ts`.
+* **Phase Status**: **Implemented in Phase 3**. See `docs/persistence.md` for full documentation.
