@@ -6,11 +6,11 @@
  */
 
 import Dexie, { Table, DexieOptions } from 'dexie';
-import { Goal, Roadmap, Task, Session, WeeklyPlanItem } from '../../domain';
+import { Goal, Roadmap, Task, Session, ActiveSession, WeeklyPlanItem } from '../../domain';
 import {
   DATABASE_NAME,
-  CURRENT_SCHEMA_VERSION,
   SCHEMA_V1_STORES,
+  SCHEMA_V2_STORES,
   WeeklyPlanRecord,
 } from './schema';
 
@@ -21,11 +21,13 @@ export class PathFlowDB extends Dexie {
   sessions!: Table<Session, string>;
   weeklyPlans!: Table<WeeklyPlanRecord, string>;
   weeklyPlanItems!: Table<WeeklyPlanItem, string>;
+  activeSession!: Table<ActiveSession, string>;
 
   constructor(dbName: string = DATABASE_NAME, options?: DexieOptions) {
     super(dbName, options);
 
-    this.version(CURRENT_SCHEMA_VERSION).stores(SCHEMA_V1_STORES);
+    this.version(1).stores(SCHEMA_V1_STORES);
+    this.version(2).stores(SCHEMA_V2_STORES);
   }
 }
 

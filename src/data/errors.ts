@@ -36,3 +36,14 @@ export class DependencyConstraintError extends PersistenceError {
     this.name = 'DependencyConstraintError';
   }
 }
+
+export class ActiveSessionConflictError extends PersistenceError {
+  readonly activeTaskId?: string;
+
+  constructor(message: string, activeTaskId?: string) {
+    super(message);
+    this.name = 'ActiveSessionConflictError';
+    this.activeTaskId = activeTaskId;
+  }
+}
+

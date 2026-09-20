@@ -43,14 +43,19 @@ Represents an actionable unit of work linked directly to a Roadmap.
   * `updatedAt: Timestamp`
   * `completedAt?: Timestamp` — ISO timestamp set when marked completed; cleared if reopened.
 
-### Session
-Represents a discrete historical execution record of deep work performed on a Task.
-* **Fields**:
+### Session & Active Session
+Represents discrete work execution on a Task.
+* **ActiveSession**: An active, running timer on the user's device.
+  * `id: EntityId` — Unique identifier.
+  * `taskId: EntityId` — ID reference to the target Task worked on.
+  * `startedAt: Timestamp` — ISO timestamp when work began.
+  * *Constraint*: At most one ActiveSession exists at any time. Elapsed time is derived on demand without disk writes.
+* **Session (Completed Historical Record)**:
   * `id: EntityId` — Unique identifier.
   * `taskId: EntityId` — ID reference to the target Task worked on.
   * `startedAt: Timestamp` — ISO timestamp when work began.
   * `endedAt: Timestamp` — ISO timestamp when work ended (`endedAt >= startedAt`).
-  * `durationMinutes: number` — Non-negative elapsed minutes (derived or explicit).
+  * `durationMinutes: number` — Non-negative elapsed minutes (derived from timestamps).
 * **Modeling Decision**: A Session is an activity record, not a container that owns or nests a Task. A Task may have zero, one, or many historical Sessions. Sessions do not store redundant progress values.
 
 ### Weekly Plan
@@ -93,6 +98,11 @@ Progress is **not stored as a large mutable entity**. Instead, pure calculation 
 * `calculateWeeklyPlanProgress(plan: WeeklyPlan, sessions: Session[])`: Correlates planned items against actual sessions recorded for planned tasks, deriving item completion rates and planned vs. actual variance minutes.
 * `calculateRoadmapProgress(roadmapId, tasks, sessions)`: Derives aggregated milestone velocity and time spent.
 * `calculateGoalProgress(goalId, roadmaps, tasks, sessions)`: Derives strategic completion percentages across all underlying roadmaps and tasks.
+* `calculateTaskActualMinutes / calculateRoadmapActualMinutes / calculateGoalActualMinutes`: Derives total actual recorded work time across hierarchy levels.
+* `calculateDateActualMinutes / calculateWeekActualMinutes`: Derives total actual work time recorded on a given calendar day or ISO week.
+* `compareTaskPlannedVsActual / compareWeeklyPlanPlannedVsActual / compareRoadmapPlannedVsActual / compareGoalPlannedVsActual`: Deterministic planned vs. actual comparisons returning variance minutes and consumption percentages.
+* `calculateDailyActivitySummaries(sessions)`: Chronological daily buckets aggregating session counts and duration per task.
+
 
 ---
 

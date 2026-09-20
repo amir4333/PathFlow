@@ -8,7 +8,7 @@
 import { EntityId, Timestamp } from '../../domain';
 
 export const DATABASE_NAME = 'PathFlowDB';
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const STORES = {
   GOALS: 'goals',
@@ -17,6 +17,7 @@ export const STORES = {
   SESSIONS: 'sessions',
   WEEKLY_PLANS: 'weeklyPlans',
   WEEKLY_PLAN_ITEMS: 'weeklyPlanItems',
+  ACTIVE_SESSION: 'activeSession',
 } as const;
 
 /**
@@ -43,4 +44,12 @@ export const SCHEMA_V1_STORES = {
   [STORES.SESSIONS]: 'id, taskId, startedAt, endedAt',
   [STORES.WEEKLY_PLANS]: 'id, weekIdentifier, createdAt',
   [STORES.WEEKLY_PLAN_ITEMS]: 'id, weeklyPlanId, taskId, targetDate',
+} as const;
+
+/**
+ * Version 2 store definitions for Dexie (adds activeSession tracking).
+ */
+export const SCHEMA_V2_STORES = {
+  ...SCHEMA_V1_STORES,
+  [STORES.ACTIVE_SESSION]: 'id, taskId, startedAt',
 } as const;

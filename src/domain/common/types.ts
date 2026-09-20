@@ -75,3 +75,54 @@ export function calculateDurationMinutes(startedAt: Timestamp, endedAt: Timestam
   }
   return Math.max(0, Math.round((endMs - startMs) / (1000 * 60)));
 }
+
+/**
+ * Computes ISO 8601 week identifier string (e.g. "2026-W38") for a given date or timestamp.
+ */
+export function getWeekIdentifier(dateInput?: Date | string | number): string {
+  const d = dateInput !== undefined ? new Date(dateInput) : new Date();
+  if (isNaN(d.getTime())) {
+    throw new Error(`Invalid date provided to getWeekIdentifier: ${dateInput}`);
+  }
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = (date.getUTCDay() + 6) % 7; // Monday = 0 ... Sunday = 6
+  date.setUTCDate(date.getUTCDate() + 3 - day);
+  const year = date.getUTCFullYear();
+  const week1 = new Date(Date.UTC(year, 0, 4));
+  const week1Day = (week1.getUTCDay() + 6) % 7;
+  week1.setUTCDate(week1.getUTCDate() + 3 - week1Day);
+  const weekNo = 1 + Math.round((date.getTime() - week1.getTime()) / (7 * 24 * 3600 * 1000));
+  const weekStr = weekNo < 10 ? `0${weekNo}` : `${weekNo}`;
+  return `${year}-W${weekStr}`;
+}
+
+/**
+ * Returns the ISO 8601 UTC date range (Monday 00:00:00.000Z to Sunday 23:59:59.999Z)
+ * for a given weekIdentifier (e.g. "2026-W38").
+ */
+export function getWeekDateRange(weekIdentifier: string): { startDate: Timestamp; endDate: Timestamp } {
+  const match = weekIdentifier.trim().match(/^(\d{4})-W(\d{2})$/);
+  if (!match) {
+    throw new Error(
+      `Invalid weekIdentifier format: "${weekIdentifier}". Expected format "YYYY-Www" (e.g. "2026-W38").`
+    );
+  }
+  const year = parseInt(match[1], 10);
+  const week = parseInt(match[2], 10);
+  if (week < 1 || week > 53) {
+    throw new Error(`Invalid week number: ${week}. Must be between 1 and 53.`);
+  }
+
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = (jan4.getUTCDay() + 6) % 7;
+  const mondayWeek1 = new Date(Date.UTC(year, 0, 4 - jan4Day));
+  const targetMonday = new Date(mondayWeek1.getTime() + (week - 1) * 7 * 24 * 3600 * 1000);
+  const targetSunday = new Date(targetMonday.getTime() + 6 * 24 * 3600 * 1000);
+
+  const startYMD = targetMonday.toISOString().split('T')[0];
+  const endYMD = targetSunday.toISOString().split('T')[0];
+  return {
+    startDate: `${startYMD}T00:00:00.000Z`,
+    endDate: `${endYMD}T23:59:59.999Z`,
+  };
+}

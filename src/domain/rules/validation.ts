@@ -9,7 +9,7 @@ import { isValidEntityId, isValidTimestamp } from '../common/types';
 import { Goal, GOAL_STATUSES } from '../models/goal';
 import { Roadmap } from '../models/roadmap';
 import { Task, TASK_STATUSES, TASK_PRIORITIES } from '../models/task';
-import { Session } from '../models/session';
+import { Session, ActiveSession } from '../models/session';
 import { WeeklyPlan, WeeklyPlanItem } from '../models/weeklyPlan';
 
 export interface ValidationResult {
@@ -165,6 +165,27 @@ export function validateSession(session: Session): ValidationResult {
 
   if (typeof session.durationMinutes !== 'number' || isNaN(session.durationMinutes) || session.durationMinutes < 0) {
     errors.push('Session durationMinutes cannot be negative.');
+  }
+
+  return errors.length === 0 ? createSuccessResult() : createErrorResult(errors);
+}
+
+/**
+ * Validates an ActiveSession entity according to domain rules.
+ */
+export function validateActiveSession(active: ActiveSession): ValidationResult {
+  const errors: string[] = [];
+
+  if (!isValidEntityId(active.id)) {
+    errors.push('ActiveSession ID must be a valid non-empty identifier.');
+  }
+
+  if (!isValidEntityId(active.taskId)) {
+    errors.push('ActiveSession must reference a valid Task ID (taskId).');
+  }
+
+  if (!isValidTimestamp(active.startedAt)) {
+    errors.push('ActiveSession startedAt must be a valid ISO timestamp.');
   }
 
   return errors.length === 0 ? createSuccessResult() : createErrorResult(errors);

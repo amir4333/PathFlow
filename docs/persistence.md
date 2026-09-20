@@ -45,12 +45,12 @@ The presentation layer and UI never access IndexedDB directly; all data reads an
 
 ---
 
-## 3. Local Database Schema (v1)
+## 3. Local Database Schema (v1 & v2)
 
 The IndexedDB schema is defined in `src/data/local/schema.ts` and managed by `PathFlowDB` (`src/data/local/database.ts`):
 
 * **Database Name**: `PathFlowDB`
-* **Version**: `1`
+* **Version**: `2` (v1: base stores; v2: adds `activeSession` singleton store)
 
 ### Stores and Indexes
 
@@ -62,6 +62,7 @@ The IndexedDB schema is defined in `src/data/local/schema.ts` and managed by `Pa
 | `sessions` | `id` | `taskId, startedAt, endedAt` | Historical execution session logs |
 | `weeklyPlans` | `id` | `weekIdentifier, createdAt` | Weekly tactical commitment headers |
 | `weeklyPlanItems` | `id` | `weeklyPlanId, taskId, targetDate` | Discrete planned task allocations |
+| `activeSession` | `id` | `taskId, startedAt` | Active running timer singleton |
 
 ---
 
@@ -73,7 +74,7 @@ Every aggregate has a dedicated repository interface defining asynchronous CRUD 
 * `GoalRepository`: `create`, `getById`, `getAll`, `update`, `delete`
 * `RoadmapRepository`: `create`, `getById`, `getAll`, `getByGoalId`, `update`, `delete`
 * `TaskRepository`: `create`, `getById`, `getAll`, `getByRoadmapId`, `getByStatus`, `update`, `delete`
-* `SessionRepository`: `create`, `getById`, `getByTaskId`, `getByDateRange`, `update`, `delete`
+* `SessionRepository`: `create`, `getById`, `getAll`, `getByTaskId`, `getByDateRange`, `getByDate`, `getByWeek`, `update`, `delete`, `getActiveSession`, `startActiveSession`, `stopActiveSession`, `discardActiveSession`
 * `WeeklyPlanRepository`: `create`, `getById`, `getByWeekIdentifier`, `getAll`, `update`, `delete`
 * `WeeklyPlanItemRepository`: `create`, `getById`, `getByPlanId`, `getByTaskId`, `getByDate`, `update`, `delete`
 

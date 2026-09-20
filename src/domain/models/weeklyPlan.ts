@@ -68,8 +68,10 @@ export function createWeeklyPlan(params: CreateWeeklyPlanParams): WeeklyPlan {
 
   // Ensure any attached items are associated with this plan ID if not already set
   const items = (params.items ?? []).map((item) => {
-    if (!item.weeklyPlanId || item.weeklyPlanId !== planId) {
-      return { ...item, weeklyPlanId: planId };
+    const id = item.id && item.id.trim().length > 0 ? item.id : generateEntityId();
+    const weeklyPlanId = item.weeklyPlanId === planId ? item.weeklyPlanId : planId;
+    if (item.id !== id || item.weeklyPlanId !== weeklyPlanId) {
+      return { ...item, id, weeklyPlanId };
     }
     return item;
   });
