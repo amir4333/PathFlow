@@ -224,7 +224,7 @@ test('Weekly Plan: References Task without duplication and validates planned ite
   const taskId = generateEntityId();
   const planItem = createWeeklyPlanItem({
     taskId,
-    targetDate: '2026-09-21',
+    targetDate: '2026-09-18',
     plannedMinutes: 60,
   });
 

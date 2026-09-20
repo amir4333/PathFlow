@@ -126,3 +126,33 @@ export function getWeekDateRange(weekIdentifier: string): { startDate: Timestamp
     endDate: `${endYMD}T23:59:59.999Z`,
   };
 }
+
+/**
+ * Validates whether an unknown value is a valid ISO 8601 week identifier string (e.g. "2026-W38").
+ */
+export function isValidWeekIdentifier(val: unknown): val is string {
+  if (typeof val !== 'string') return false;
+  const match = val.trim().match(/^(\d{4})-W(0[1-9]|[1-4][0-9]|5[0-3])$/);
+  return match !== null;
+}
+
+/**
+ * Validates whether an unknown value is a valid calendar date string in YYYY-MM-DD format.
+ * Accurately guards calendar limits (e.g. non-existent dates like February 30th).
+ */
+export function isValidDateString(val: unknown): val is string {
+  if (typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}

@@ -72,7 +72,7 @@ Represents tactical time and task allocation for a specific week.
   * `id: EntityId`
   * `weeklyPlanId: EntityId` — ID reference to the parent WeeklyPlan.
   * `taskId: EntityId` — References an existing Task by ID (no Task data duplication).
-  * `targetDate: string` — ISO calendar date (e.g., `'2026-09-21'`).
+  * `targetDate?: string` — Optional ISO calendar date (e.g., `'2026-09-14'`). Omitted for flexible weekly-only commitments without specific daily allocation.
   * `plannedMinutes: number` — Non-negative planned duration.
   * `isCompleted: boolean`
 

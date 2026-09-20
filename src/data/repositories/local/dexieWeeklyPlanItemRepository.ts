@@ -61,6 +61,14 @@ export class DexieWeeklyPlanItemRepository implements WeeklyPlanItemRepository {
       .toArray();
   }
 
+  async getUnallocatedByPlanId(weeklyPlanId: EntityId): Promise<WeeklyPlanItem[]> {
+    const items = await this.db.weeklyPlanItems
+      .where('weeklyPlanId')
+      .equals(weeklyPlanId)
+      .toArray();
+    return items.filter((item) => !item.targetDate || item.targetDate.trim().length === 0);
+  }
+
   async update(item: WeeklyPlanItem): Promise<WeeklyPlanItem> {
     const validation = validateWeeklyPlanItem(item);
     if (!validation.isValid) {

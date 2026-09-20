@@ -75,8 +75,8 @@ Every aggregate has a dedicated repository interface defining asynchronous CRUD 
 * `RoadmapRepository`: `create`, `getById`, `getAll`, `getByGoalId`, `update`, `delete`
 * `TaskRepository`: `create`, `getById`, `getAll`, `getByRoadmapId`, `getByStatus`, `update`, `delete`
 * `SessionRepository`: `create`, `getById`, `getAll`, `getByTaskId`, `getByDateRange`, `getByDate`, `getByWeek`, `update`, `delete`, `getActiveSession`, `startActiveSession`, `stopActiveSession`, `discardActiveSession`
-* `WeeklyPlanRepository`: `create`, `getById`, `getByWeekIdentifier`, `getAll`, `update`, `delete`
-* `WeeklyPlanItemRepository`: `create`, `getById`, `getByPlanId`, `getByTaskId`, `getByDate`, `update`, `delete`
+* `WeeklyPlanRepository`: `create`, `getById`, `getByWeekIdentifier`, `getByTaskId`, `getItemsByPlanId`, `getAll`, `update`, `delete`
+* `WeeklyPlanItemRepository`: `create`, `getById`, `getByPlanId`, `getByTaskId`, `getByDate`, `getUnallocatedByPlanId`, `update`, `delete`
 
 ### Factory & Dependency Injection
 Repositories can be instantiated individually with any `PathFlowDB` instance or created as a complete container via `createLocalRepositories(db)`. This ensures clean isolation in integration tests and straightforward dependency injection in application providers.

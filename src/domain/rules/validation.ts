@@ -5,7 +5,13 @@
  * Pure TypeScript functions with no external framework dependencies.
  */
 
-import { isValidEntityId, isValidTimestamp } from '../common/types';
+import {
+  isValidEntityId,
+  isValidTimestamp,
+  isValidWeekIdentifier,
+  isValidDateString,
+  getWeekIdentifier,
+} from '../common/types';
 import { Goal, GOAL_STATUSES } from '../models/goal';
 import { Roadmap } from '../models/roadmap';
 import { Task, TASK_STATUSES, TASK_PRIORITIES } from '../models/task';
@@ -193,6 +199,7 @@ export function validateActiveSession(active: ActiveSession): ValidationResult {
 
 /**
  * Validates an individual WeeklyPlanItem.
+ * targetDate is optional (for weekly-level commitments without specific daily allocation).
  */
 export function validateWeeklyPlanItem(item: WeeklyPlanItem): ValidationResult {
   const errors: string[] = [];
@@ -209,8 +216,12 @@ export function validateWeeklyPlanItem(item: WeeklyPlanItem): ValidationResult {
     errors.push('Weekly plan item must reference a valid Task ID (taskId).');
   }
 
-  if (!item.targetDate || item.targetDate.trim().length === 0) {
-    errors.push('Weekly plan item targetDate is required.');
+  // targetDate is optional (for weekly-level commitments without specific daily allocation).
+  // If provided, it must be a valid calendar date string (YYYY-MM-DD).
+  if (item.targetDate !== undefined && item.targetDate !== null && item.targetDate.trim().length > 0) {
+    if (!isValidDateString(item.targetDate)) {
+      errors.push(`Weekly plan item targetDate "${item.targetDate}" is not a valid calendar date (YYYY-MM-DD).`);
+    }
   }
 
   if (typeof item.plannedMinutes !== 'number' || isNaN(item.plannedMinutes) || item.plannedMinutes < 0) {
@@ -221,7 +232,7 @@ export function validateWeeklyPlanItem(item: WeeklyPlanItem): ValidationResult {
 }
 
 /**
- * Validates a WeeklyPlan aggregate.
+ * Validates a WeeklyPlan aggregate according to domain rules.
  */
 export function validateWeeklyPlan(plan: WeeklyPlan): ValidationResult {
   const errors: string[] = [];
@@ -230,8 +241,8 @@ export function validateWeeklyPlan(plan: WeeklyPlan): ValidationResult {
     errors.push('Weekly plan ID must be a valid non-empty identifier.');
   }
 
-  if (!plan.weekIdentifier || plan.weekIdentifier.trim().length === 0) {
-    errors.push('Weekly plan weekIdentifier is required (e.g., "2026-W38").');
+  if (!isValidWeekIdentifier(plan.weekIdentifier)) {
+    errors.push(`Weekly plan weekIdentifier "${plan.weekIdentifier}" is invalid. Expected format "YYYY-Www" (e.g., "2026-W38").`);
   }
 
   if (typeof plan.targetMinutes !== 'number' || isNaN(plan.targetMinutes) || plan.targetMinutes < 0) {
@@ -246,12 +257,50 @@ export function validateWeeklyPlan(plan: WeeklyPlan): ValidationResult {
     errors.push('Weekly plan updatedAt must be a valid ISO timestamp.');
   }
 
+  const seenItemIds = new Set<string>();
+  const seenTaskDateKeys = new Set<string>();
+
   plan.items.forEach((item, index) => {
     const itemResult = validateWeeklyPlanItem(item);
     if (!itemResult.isValid) {
       errors.push(`Item at index ${index} is invalid: ${itemResult.errors.join('; ')}`);
-    } else if (item.weeklyPlanId !== plan.id) {
-      errors.push(`Item at index ${index} references weeklyPlanId "${item.weeklyPlanId}" which does not match parent plan ID "${plan.id}".`);
+    } else {
+      if (item.weeklyPlanId !== plan.id) {
+        errors.push(`Item at index ${index} references weeklyPlanId "${item.weeklyPlanId}" which does not match parent plan ID "${plan.id}".`);
+      }
+
+      // Check item ID uniqueness
+      if (seenItemIds.has(item.id)) {
+        errors.push(`Duplicate item ID "${item.id}" found in weekly plan.`);
+      } else {
+        seenItemIds.add(item.id);
+      }
+
+      // Check that daily allocations belong to the appropriate week
+      if (item.targetDate && item.targetDate.trim().length > 0 && isValidDateString(item.targetDate)) {
+        try {
+          const itemWeek = getWeekIdentifier(item.targetDate);
+          if (isValidWeekIdentifier(plan.weekIdentifier) && itemWeek !== plan.weekIdentifier.trim()) {
+            errors.push(
+              `Item targetDate "${item.targetDate}" belongs to week "${itemWeek}", which does not match plan weekIdentifier "${plan.weekIdentifier}".`
+            );
+          }
+        } catch {
+          errors.push(`Item targetDate "${item.targetDate}" could not be mapped to a valid week.`);
+        }
+      }
+
+      // Prevent duplicate planning records for the exact same task on the exact same target date (or duplicate weekly unallocated)
+      const dateKey = `${item.taskId}:${item.targetDate ?? '__unallocated__'}`;
+      if (seenTaskDateKeys.has(dateKey)) {
+        errors.push(
+          item.targetDate
+            ? `Duplicate daily allocation for Task "${item.taskId}" on date "${item.targetDate}". Consolidate planned minutes instead of duplicating records.`
+            : `Duplicate unallocated weekly commitment for Task "${item.taskId}". Consolidate planned minutes instead of duplicating records.`
+        );
+      } else {
+        seenTaskDateKeys.add(dateKey);
+      }
     }
   });
 
