@@ -4,5 +4,11 @@ This directory is reserved for domain business services that orchestrate operati
 
 ## Architectural Guidelines
 * **Stateless Operations**: Domain services perform business operations without directly managing UI or persistence state.
-* **Phase 2+ Scope**: Calculation routines, workflow step transitions, and complex domain operations will be placed here.
-* **Decoupling**: Kept strictly independent from React components and network adapters.
+* **Implemented (Phase 2)**:
+  * `progressCalculator.ts`: Pure, deterministic calculation functions deriving progress metrics from source data:
+    * `calculateTaskProgress`
+    * `calculateSessionProgress`
+    * `calculateWeeklyPlanProgress`
+    * `calculateRoadmapProgress`
+    * `calculateGoalProgress`
+* **Decoupling**: Kept strictly independent from React components and network adapters. No mutable progress entities stored permanently.

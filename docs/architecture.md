@@ -55,7 +55,7 @@ The system is partitioned into five distinct architectural layers:
 ### 3. Domain Layer (`src/domain/`)
 * **Role**: The core business logic of PathFlow. Encapsulates entity models, validation invariants, and calculation services (e.g., progress formulas, completion velocity).
 * **Rule**: Written in **pure TypeScript** with zero dependencies on React, browser DOM, or storage implementations.
-* **Status**: **Conceptual Structure / Placeholder for Phase 2**. No premature domain types have been declared, preserving clean requirements modeling for Phase 2.
+* **Status**: **Implemented (Phase 2)**. Core entity models (Goal, Roadmap, Task, Session, WeeklyPlan), validation rules, lifecycle state transitions, and pure progress calculation services are established in pure TypeScript. See `docs/domain-model.md` for full specification.
 
 ### 4. Data Layer (`src/data/`)
 * **Role**: Mediates data storage through the Repository pattern. Divided into `local/` (target: IndexedDB for offline persistence), `remote/` (future API client), and `repositories/` (contract interfaces).
@@ -85,8 +85,8 @@ The system is partitioned into five distinct architectural layers:
 | **Presentation** | AppShell & Navigation | **Implemented** | Phase 1 Foundation |
 | **Presentation** | Feature View Shells | **Implemented (Placeholders)** | Phase 2–4 |
 | **Application** | Router & App Config | **Implemented** | Phase 1 Foundation |
-| **Domain** | Models (Goals, Tasks, etc.) | Conceptual Directory | Phase 2 |
-| **Domain** | Services & Invariant Rules | Conceptual Directory | Phase 2 & 3 |
+| **Domain** | Models (Goals, Tasks, etc.) | **Implemented** | Phase 2 |
+| **Domain** | Services & Invariant Rules | **Implemented** | Phase 2 |
 | **Data** | Local IndexedDB Adapter | Conceptual Directory | Phase 2 & 3 |
 | **Data** | Remote API & Repositories | Conceptual Directory | Phase 2 & 4 |
 | **Sync** | Queue, Engine, Conflict | Conceptual Directory | Phase 4 |
