@@ -19,42 +19,55 @@ export const DashboardView: React.FC = () => {
   const { navigate } = useRouter();
   const application = useApplication();
   const [stats, setStats] = useState<{
-    goals: number;
-    roadmaps: number;
-    tasks: number;
-    sessions: number;
-    weeklyPlans: number;
-    activeSessionTask: string | null;
+    totalGoals: number;
+    activeGoals: number;
+    inProgressGoals: number;
+    completedGoals: number;
+    totalRoadmaps: number;
+    totalTasks: number;
+    totalSessions: number;
+    totalWeeklyPlans: number;
+    totalActualMinutes: number;
   }>({
-    goals: 0,
-    roadmaps: 0,
-    tasks: 0,
-    sessions: 0,
-    weeklyPlans: 0,
-    activeSessionTask: null,
+    totalGoals: 0,
+    activeGoals: 0,
+    inProgressGoals: 0,
+    completedGoals: 0,
+    totalRoadmaps: 0,
+    totalTasks: 0,
+    totalSessions: 0,
+    totalWeeklyPlans: 0,
+    totalActualMinutes: 0,
   });
 
   useEffect(() => {
     let isMounted = true;
     async function loadStats() {
       try {
-        const [goals, roadmaps, tasks, sessions, weeklyPlans, activeSession] = await Promise.all([
+        const [goals, roadmaps, tasks, sessions, weeklyPlans] = await Promise.all([
           application.goals.listGoals(),
           application.roadmaps.listRoadmaps(),
           application.tasks.listTasks(),
           application.sessions.getAllSessions(),
           application.weeklyPlans.listWeeklyPlans(),
-          application.sessions.getActiveSession(),
         ]);
 
         if (isMounted) {
+          const activeGoals = goals.filter((g) => g.status !== 'archived').length;
+          const inProgressGoals = goals.filter((g) => g.status === 'in_progress').length;
+          const completedGoals = goals.filter((g) => g.status === 'completed').length;
+          const totalMinutes = sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
+
           setStats({
-            goals: goals.length,
-            roadmaps: roadmaps.length,
-            tasks: tasks.length,
-            sessions: sessions.length,
-            weeklyPlans: weeklyPlans.length,
-            activeSessionTask: activeSession ? activeSession.taskId : null,
+            totalGoals: goals.length,
+            activeGoals,
+            inProgressGoals,
+            completedGoals,
+            totalRoadmaps: roadmaps.length,
+            totalTasks: tasks.length,
+            totalSessions: sessions.length,
+            totalWeeklyPlans: weeklyPlans.length,
+            totalActualMinutes: totalMinutes,
           });
         }
       } catch (err) {
@@ -121,39 +134,68 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* Application Layer Live State Summary (Phase 7 Integration) */}
+      {/* Application Layer Live State Summary (Phase 8 Integration) */}
       <div id="application-layer-stats" className="p-4 sm:p-5 rounded-xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
-              Application Layer & IndexedDB Store
+              Strategic Portfolio & Pipeline Status
             </h2>
           </div>
           <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-            Active Layer: React UI → Application Services → Repositories → Dexie
+            Phase 8: Active Goal & Roadmap Slice
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <button
+            onClick={() => navigate('goals')}
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+          >
+            <span className="text-xs text-neutral-500 block">Active Goals</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.activeGoals}</span>
+              <span className="text-xs text-neutral-400">/ {stats.totalGoals} total</span>
+            </div>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
+              {stats.inProgressGoals} in progress
+            </span>
+          </button>
+
+          <button
+            onClick={() => navigate('roadmaps')}
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+          >
+            <span className="text-xs text-neutral-500 block">Milestone Roadmaps</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalRoadmaps}</span>
+              <span className="text-xs text-neutral-400">pathways</span>
+            </div>
+            <span className="text-[10px] text-neutral-400 mt-1 block">
+              Attached to goals
+            </span>
+          </button>
+
           <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-            <span className="text-xs text-neutral-500 block">Goals</span>
-            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.goals}</span>
+            <span className="text-xs text-neutral-500 block">Time Invested</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalActualMinutes}m</span>
+              <span className="text-xs text-neutral-400">({stats.totalSessions} sessions)</span>
+            </div>
+            <span className="text-[10px] text-neutral-400 mt-1 block">
+              Deep work logged
+            </span>
           </div>
+
           <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-            <span className="text-xs text-neutral-500 block">Roadmaps</span>
-            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.roadmaps}</span>
-          </div>
-          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-            <span className="text-xs text-neutral-500 block">Tasks</span>
-            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.tasks}</span>
-          </div>
-          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-            <span className="text-xs text-neutral-500 block">Sessions</span>
-            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.sessions}</span>
-          </div>
-          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg col-span-2 sm:col-span-1">
-            <span className="text-xs text-neutral-500 block">Weekly Plans</span>
-            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.weeklyPlans}</span>
+            <span className="text-xs text-neutral-500 block">Tasks in Backlog</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalTasks}</span>
+              <span className="text-xs text-neutral-400">units</span>
+            </div>
+            <span className="text-[10px] text-neutral-400 mt-1 block">
+              Next feature slice
+            </span>
           </div>
         </div>
       </div>

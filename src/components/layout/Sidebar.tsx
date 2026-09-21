@@ -102,13 +102,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     <span>{route.label}</span>
                   </div>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                       isActive
                         ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
+                        : route.id === 'goals' || route.id === 'roadmaps'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold'
                         : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
                     }`}
                   >
-                    P2+
+                    {route.id === 'goals' || route.id === 'roadmaps' ? 'Active' : 'P2+'}
                   </span>
                 </button>
               );

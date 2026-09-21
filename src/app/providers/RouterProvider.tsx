@@ -1,45 +1,89 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AppRouteId, APP_ROUTES } from '../routes/routes';
 
+export interface RouteState {
+  route: AppRouteId;
+  params: Record<string, string>;
+  hashString: string;
+}
+
 interface RouterContextValue {
   currentRoute: AppRouteId;
-  navigate: (route: AppRouteId) => void;
+  params: Record<string, string>;
+  hashString: string;
+  navigate: (pathOrRoute: string | AppRouteId, params?: Record<string, string>) => void;
 }
 
 const RouterContext = createContext<RouterContextValue | undefined>(undefined);
 
-function parseHashToRoute(hash: string): AppRouteId {
+export function parseHashToState(hash: string): RouteState {
   const cleanHash = hash.replace(/^#\/?/, '').trim();
-  const validRoute = APP_ROUTES.find((r) => r.id === cleanHash);
-  return validRoute ? validRoute.id : 'dashboard';
+  if (!cleanHash) {
+    return { route: 'dashboard', params: {}, hashString: 'dashboard' };
+  }
+
+  // Handle patterns:
+  // goals/:id
+  // roadmaps/:id
+  // or query/hash strings
+  const parts = cleanHash.split('/');
+  const baseSegment = parts[0] as AppRouteId;
+  const validRoute = APP_ROUTES.find((r) => r.id === baseSegment);
+
+  if (!validRoute) {
+    return { route: 'dashboard', params: {}, hashString: 'dashboard' };
+  }
+
+  const params: Record<string, string> = {};
+  if (parts.length > 1 && parts[1]) {
+    params.id = parts[1];
+  }
+
+  return {
+    route: validRoute.id,
+    params,
+    hashString: cleanHash,
+  };
 }
 
 export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentRoute, setCurrentRoute] = useState<AppRouteId>(() => {
+  const [routeState, setRouteState] = useState<RouteState>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
-      return parseHashToRoute(window.location.hash);
+      return parseHashToState(window.location.hash);
     }
-    return 'dashboard';
+    return { route: 'dashboard', params: {}, hashString: 'dashboard' };
   });
 
   useEffect(() => {
     const handleHashChange = () => {
-      setCurrentRoute(parseHashToRoute(window.location.hash));
+      setRouteState(parseHashToState(window.location.hash));
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const navigate = (route: AppRouteId) => {
-    setCurrentRoute(route);
+  const navigate = (pathOrRoute: string | AppRouteId, params?: Record<string, string>) => {
+    let targetHash = pathOrRoute;
+    if (params && params.id) {
+      targetHash = `${pathOrRoute}/${params.id}`;
+    }
+    const newState = parseHashToState(targetHash);
+    setRouteState(newState);
     if (typeof window !== 'undefined') {
-      window.location.hash = `#${route}`;
+      window.location.hash = `#${targetHash}`;
     }
   };
 
   return (
-    <RouterContext.Provider value={{ currentRoute, navigate }}>
+    <RouterContext.Provider
+      value={{
+        currentRoute: routeState.route,
+        params: routeState.params,
+        hashString: routeState.hashString,
+        navigate,
+      }}
+    >
       {children}
     </RouterContext.Provider>
   );
