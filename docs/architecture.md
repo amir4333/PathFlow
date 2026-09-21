@@ -47,10 +47,10 @@ The system is partitioned into five distinct architectural layers:
 * **Rule**: React components must contain **no direct domain business algorithms** and **no direct database or network calls**. All actions delegate downward through application hooks and repositories.
 * **Status**: **Implemented (Foundation Shell)**. AppShell, responsive Sidebar, Header, and placeholder views for all 8 target screens are active to verify layout and navigation.
 
-### 2. Application Layer (`src/app/`)
-* **Role**: Orchestrates client runtime concerns including routing, contextual providers, and app configuration.
-* **Rule**: Holds application-level configuration without introducing domain logic or heavyweight global state libraries.
-* **Status**: **Implemented (Foundation Shell)**. Type-safe router provider and centralized configuration are active.
+### 2. Application Layer (`src/app/`, `src/application/`)
+* **Role**: Coordinates workflows, lifecycle transitions, validation rules, and repository operations between presentation components and the domain layer. Holds service composition, typed error handling, DTO contracts, and client runtime concerns (routing and contextual providers).
+* **Rule**: Decouples UI components from storage details. Validates inputs, coordinates domain rules, and persists domain aggregates via repository interfaces without introducing heavyweight external state frameworks.
+* **Status**: **Implemented (Phase 7)**. Complete application service layer (`GoalService`, `RoadmapService`, `TaskService`, `SessionService`, `WeeklyPlanningService`, `ProgressService`), standardized domain error hierarchy, `ApplicationProvider` React context, and composition root factory are active. See `docs/application-layer.md` for full documentation.
 
 ### 3. Domain Layer (`src/domain/`)
 * **Role**: The core business logic of PathFlow. Encapsulates entity models, validation invariants, and calculation services (e.g., progress formulas, session duration calculation, actual time aggregations, planned vs. actual comparisons).
@@ -85,6 +85,7 @@ The system is partitioned into five distinct architectural layers:
 | **Presentation** | AppShell & Navigation | **Implemented** | Phase 1 Foundation |
 | **Presentation** | Feature View Shells | **Implemented (Placeholders)** | Phase 1 & Phase 5 |
 | **Application** | Router & App Config | **Implemented** | Phase 1 Foundation |
+| **Application** | Application Services & Composition Root | **Implemented** | Phase 7 |
 | **Domain** | Models (Goals, Tasks, etc.) | **Implemented** | Phase 2 |
 | **Domain** | Services & Invariant Rules | **Implemented** | Phase 2 |
 | **Domain & Data** | Session & Time Tracking Foundation | **Implemented** | Phase 4 |

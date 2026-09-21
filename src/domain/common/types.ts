@@ -156,3 +156,17 @@ export function isValidDateString(val: unknown): val is string {
     date.getUTCDate() === day
   );
 }
+
+/**
+ * Checks whether a given calendar date (YYYY-MM-DD) falls within a given ISO week (e.g. "2026-W38").
+ */
+export function isDateInWeek(dateStr: string, weekIdentifier: string): boolean {
+  if (!isValidDateString(dateStr) || !isValidWeekIdentifier(weekIdentifier)) {
+    return false;
+  }
+  try {
+    return getWeekIdentifier(dateStr) === weekIdentifier.trim();
+  } catch {
+    return false;
+  }
+}

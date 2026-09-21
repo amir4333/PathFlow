@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from '../../app/providers/RouterProvider';
+import { useApplication } from '../../app/providers/ApplicationProvider';
 import { APP_CONFIG } from '../../app/config/appConfig';
 import { APP_ROUTES, AppRouteId } from '../../app/routes/routes';
 import {
@@ -16,6 +17,55 @@ import {
 
 export const DashboardView: React.FC = () => {
   const { navigate } = useRouter();
+  const application = useApplication();
+  const [stats, setStats] = useState<{
+    goals: number;
+    roadmaps: number;
+    tasks: number;
+    sessions: number;
+    weeklyPlans: number;
+    activeSessionTask: string | null;
+  }>({
+    goals: 0,
+    roadmaps: 0,
+    tasks: 0,
+    sessions: 0,
+    weeklyPlans: 0,
+    activeSessionTask: null,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadStats() {
+      try {
+        const [goals, roadmaps, tasks, sessions, weeklyPlans, activeSession] = await Promise.all([
+          application.goals.listGoals(),
+          application.roadmaps.listRoadmaps(),
+          application.tasks.listTasks(),
+          application.sessions.getAllSessions(),
+          application.weeklyPlans.listWeeklyPlans(),
+          application.sessions.getActiveSession(),
+        ]);
+
+        if (isMounted) {
+          setStats({
+            goals: goals.length,
+            roadmaps: roadmaps.length,
+            tasks: tasks.length,
+            sessions: sessions.length,
+            weeklyPlans: weeklyPlans.length,
+            activeSessionTask: activeSession ? activeSession.taskId : null,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load application stats', err);
+      }
+    }
+    loadStats();
+    return () => {
+      isMounted = false;
+    };
+  }, [application]);
 
   const featureCards = APP_ROUTES.filter((route) => route.id !== 'dashboard');
 
@@ -67,6 +117,43 @@ export const DashboardView: React.FC = () => {
                 )}
               </React.Fragment>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Application Layer Live State Summary (Phase 7 Integration) */}
+      <div id="application-layer-stats" className="p-4 sm:p-5 rounded-xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
+              Application Layer & IndexedDB Store
+            </h2>
+          </div>
+          <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+            Active Layer: React UI → Application Services → Repositories → Dexie
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
+          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+            <span className="text-xs text-neutral-500 block">Goals</span>
+            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.goals}</span>
+          </div>
+          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+            <span className="text-xs text-neutral-500 block">Roadmaps</span>
+            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.roadmaps}</span>
+          </div>
+          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+            <span className="text-xs text-neutral-500 block">Tasks</span>
+            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.tasks}</span>
+          </div>
+          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+            <span className="text-xs text-neutral-500 block">Sessions</span>
+            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.sessions}</span>
+          </div>
+          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg col-span-2 sm:col-span-1">
+            <span className="text-xs text-neutral-500 block">Weekly Plans</span>
+            <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">{stats.weeklyPlans}</span>
           </div>
         </div>
       </div>
