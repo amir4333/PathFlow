@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
+import { useActiveSession } from '../sessions/ActiveSessionContext';
 import { Task, Roadmap, Goal, TaskStatus, TaskPriority, canTransitionTaskStatus } from '../../domain';
 import { TaskFormModal } from './TaskFormModal';
 import { getPriorityBadge, getStatusConfig } from './TaskCard';
@@ -16,6 +17,8 @@ import {
   Trash2,
   ChevronDown,
   Layers,
+  Play,
+  Square,
 } from 'lucide-react';
 
 interface TaskDetailViewProps {
@@ -25,6 +28,7 @@ interface TaskDetailViewProps {
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { activeSession, formattedTime, startSession } = useActiveSession();
 
   const [task, setTask] = useState<Task | null>(null);
   const [parentRoadmap, setParentRoadmap] = useState<Roadmap | null>(null);
@@ -226,6 +230,37 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {activeSession?.taskId === task?.id ? (
+            <button
+              id="btn-task-active-session"
+              onClick={() => navigate('sessions')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 cursor-pointer transition shadow-2xs"
+              title="Session currently in progress for this task. Click to open Sessions."
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-mono">{formattedTime}</span>
+              <span>Running</span>
+            </button>
+          ) : (
+            task && task.status !== 'completed' && task.status !== 'cancelled' && (
+              <button
+                id="btn-start-task-session"
+                onClick={async () => {
+                  try {
+                    await startSession(task.id);
+                    navigate('sessions');
+                  } catch (err: unknown) {
+                    setActionError(err instanceof Error ? err.message : 'Failed to start session');
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 cursor-pointer transition shadow-2xs"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>Start Session</span>
+              </button>
+            )
+          )}
+
           <button
             id="btn-edit-task-detail"
             onClick={() => setIsEditModalOpen(true)}

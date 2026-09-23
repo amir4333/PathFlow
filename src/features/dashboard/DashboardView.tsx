@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useApplication } from '../../app/providers/ApplicationProvider';
+import { useActiveSession } from '../sessions/ActiveSessionContext';
 import { APP_CONFIG } from '../../app/config/appConfig';
 import { APP_ROUTES, AppRouteId } from '../../app/routes/routes';
 import {
@@ -13,11 +14,14 @@ import {
   Clock,
   Sparkles,
   GitBranch,
+  Play,
+  Square,
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { activeSession, activeTask, formattedTime } = useActiveSession();
   const [stats, setStats] = useState<{
     totalGoals: number;
     activeGoals: number;
@@ -142,6 +146,48 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
+      {/* Live Active Focus Session Banner (if running) */}
+      {activeSession && (
+        <div
+          id="dashboard-active-session-banner"
+          className="p-5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border-2 border-emerald-500/40 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-mono font-bold text-lg shrink-0 shadow-xs">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400">
+                  Active Focus Session
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <div className="font-bold text-neutral-900 dark:text-neutral-100 text-base">
+                {activeTask?.title || 'Active Task'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="text-right">
+              <div className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 font-semibold">
+                Elapsed
+              </div>
+              <span className="font-mono text-2xl sm:text-3xl font-bold text-neutral-950 dark:text-white">
+                {formattedTime}
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('sessions')}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition shadow-xs"
+            >
+              Open Timer
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Application Layer Live State Summary (Phase 8 Integration) */}
       <div id="application-layer-stats" className="p-4 sm:p-5 rounded-xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 space-y-3">
         <div className="flex items-center justify-between">
@@ -152,7 +198,7 @@ export const DashboardView: React.FC = () => {
             </h2>
           </div>
           <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-            Phase 8B: Goal → Roadmap → Task Slice
+            Phase 9A: Active Session & Time Tracking
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
@@ -184,16 +230,19 @@ export const DashboardView: React.FC = () => {
             </span>
           </button>
 
-          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+          <button
+            onClick={() => navigate('sessions')}
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+          >
             <span className="text-xs text-neutral-500 block">Time Invested</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalActualMinutes}m</span>
               <span className="text-xs text-neutral-400">({stats.totalSessions} sessions)</span>
             </div>
-            <span className="text-[10px] text-neutral-400 mt-1 block">
-              Deep work logged
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
+              Manage / View Timers →
             </span>
-          </div>
+          </button>
 
           <button
             onClick={() => navigate('tasks')}

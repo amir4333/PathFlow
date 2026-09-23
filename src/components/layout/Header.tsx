@@ -1,14 +1,16 @@
 import React from 'react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { APP_ROUTES } from '../../app/routes/routes';
-import { Menu, ShieldCheck, WifiOff } from 'lucide-react';
+import { useActiveSession } from '../../features/sessions/ActiveSessionContext';
+import { Menu, ShieldCheck, WifiOff, Clock } from 'lucide-react';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
-  const { currentRoute, params } = useRouter();
+  const { currentRoute, params, navigate } = useRouter();
+  const { activeSession, activeTask, formattedTime } = useActiveSession();
   const activeRoute = APP_ROUTES.find((r) => r.id === currentRoute) || APP_ROUTES[0];
 
   return (
@@ -44,9 +46,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Live Active Session Ticker */}
+        {activeSession && (
+          <button
+            id="header-active-session-indicator"
+            onClick={() => navigate('sessions')}
+            className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 cursor-pointer transition shadow-2xs"
+            title="Active session in progress. Click to view timer."
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-mono font-bold tracking-tight">{formattedTime}</span>
+            <span className="hidden md:inline max-w-[120px] truncate text-neutral-600 dark:text-neutral-300 text-[11px]">
+              {activeTask?.title || 'Session'}
+            </span>
+          </button>
+        )}
+
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Phase 8 Active</span>
+          <span>Phase 9A Active</span>
         </div>
 
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">

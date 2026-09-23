@@ -142,3 +142,27 @@ Local Storage (IndexedDB via Dexie.js `PathFlowDB`)
 * The **Domain Layer** has 0 dependencies on React, browser DOM, or storage implementations.
 * The **Repository Layer** guarantees validation before writes and isolates storage engines behind clean interfaces.
 * The **UI Layer** never directly communicates with IndexedDB.
+
+---
+
+## 6. Phase 9A: Active Session / Timer UI
+
+Phase 9A exposes the underlying Session & Time Tracking engine to users through an intuitive, persistent, offline-first active timer interface:
+
+1. **ActiveSessionTimer Component (`src/features/sessions/ActiveSessionTimer.tsx`)**:
+   - Reusable timer card supporting both full and compact views.
+   - When idle, provides a target task selector with quick estimate indicators and a "Start Session" action.
+   - When active, displays a live ticking clock (MM:SS / HH:MM:SS), running status beacon, started timestamp, task details, and "Stop & Save" / "Discard" controls.
+
+2. **ActiveSessionContext (`src/features/sessions/ActiveSessionContext.tsx`)**:
+   - Provides global active session state across the application shell.
+   - Restores the active session from IndexedDB immediately on mount or browser refresh.
+   - Derives elapsed seconds directly from `startedAt` timestamps using domain utilities rather than purely synthetic state increments, guaranteeing accuracy across tab backgrounding and refreshes.
+   - Prevents multi-session conflicts and updates all observing components upon state transitions.
+
+3. **Integrated Navigation & UI Placements**:
+   - **Header (`src/components/layout/Header.tsx`)**: Displays an ambient, pulsing live timer ticker accessible from any page.
+   - **Dashboard (`src/features/dashboard/DashboardView.tsx`)**: Shows an active focus session card and quick navigation to the timer.
+   - **Task Detail (`src/features/tasks/TaskDetailView.tsx`)**: Allows direct timer invocation from specific tasks.
+   - **Sessions View (`src/features/sessions/SessionsView.tsx`)**: Dedicated session hub featuring the timer and immutable completed session history.
+
