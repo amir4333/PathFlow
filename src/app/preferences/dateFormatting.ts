@@ -49,7 +49,7 @@ export function formatNumeral(
 /**
  * Normalizes input into a valid Date instance. Returns null if invalid.
  */
-function parseToDate(input: string | Date | number): Date | null {
+export function parseToDate(input: string | Date | number): Date | null {
   if (input instanceof Date) {
     return isNaN(input.getTime()) ? null : input;
   }
@@ -178,3 +178,37 @@ export function formatDurationMinutes(
   }
   return `${formattedNum}m`;
 }
+
+/**
+ * Formats a duration in minutes into a concise hours and minutes string with localized units and numerals.
+ * e.g., 80 -> "1h 20m" in English, "۱ ساعت و ۲۰ دقیقه" in Persian.
+ * 45 -> "45m" in English, "۴۵ دقیقه" in Persian.
+ * 120 -> "2h" in English, "۲ ساعت" in Persian.
+ * 0 -> "0m" in English, "۰ دقیقه" in Persian.
+ */
+export function formatDurationHoursMinutes(
+  totalMinutes: number,
+  preferences: UserPreferences = DEFAULT_PREFERENCES
+): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (preferences.language === 'fa') {
+    if (hours > 0 && minutes > 0) {
+      return `${formatNumeral(hours, preferences)} ساعت و ${formatNumeral(minutes, preferences)} دقیقه`;
+    }
+    if (hours > 0) {
+      return `${formatNumeral(hours, preferences)} ساعت`;
+    }
+    return `${formatNumeral(minutes, preferences)} دقیقه`;
+  }
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+  return `${minutes}m`;
+}
+

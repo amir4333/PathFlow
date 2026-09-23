@@ -186,4 +186,41 @@ Phase 9B allows users to record completed work sessions executed offline or with
    - **Sessions View (`src/features/sessions/SessionsView.tsx`)**: Provides "Log Manual Session" actions in the view header, empty state, and history list. Immediately refreshes session history upon creation.
    - **Task Detail View (`src/features/tasks/TaskDetailView.tsx`)**: Allows quick logging of past sessions directly associated with a specific task.
 
+---
+
+## 8. Phase 9C-1: Session History & Filtering Core
+
+Phase 9C-1 introduces robust historical query filtering and aggregate summary capabilities in the Application service layer:
+
+1. **Filtering Model (`SessionHistoryFilter`)**:
+   - Date range bounds (`startDate`, `endDate`) normalized to exact whole-day ISO UTC boundaries (`00:00:00.000Z` to `23:59:59.999Z`).
+   - Task filtering (`taskId`).
+   - Roadmap hierarchy filtering (`roadmapId`), matching all tasks belonging to the selected roadmap.
+   - Compound combinations combining date bounds, roadmap, and task selectors.
+
+2. **Application Query Service (`SessionService.querySessionHistory`)**:
+   - Derives total session count, total focused minutes, and `{ hours, minutes }` breakdown.
+   - Sorts results deterministically newest first (`startedAt` descending, `id` descending tie-breaker).
+   - Keeps domain models and Dexie storage pure ISO UTC, avoiding backend calendar entanglement.
+
+---
+
+## 9. Phase 9C-2: Session History UX & Daily Grouping
+
+Phase 9C-2 delivers an intuitive, calendar-aware daily grouped presentation layer for completed sessions:
+
+1. **Daily Grouping (`src/features/sessions/sessionGrouping.ts`)**:
+   - `groupSessionsByDay(sessions, preferences, referenceDate)`: Pure presentation derivation that buckets completed sessions by calendar day.
+   - Derives calendar day keys (`dateKey`) dynamically using the user's active calendar preference (Gregorian or Persian / Jalali).
+   - Generates per-day aggregate summaries (`sessionCount`, `totalMinutes`, `formattedTotalTime`, `formattedSessionCount`).
+   - Computes contextual relative day markers ("Today" / "Yesterday" or "امروز" / "دیروز") alongside exact calendar dates.
+
+2. **Session Row & Card UX (`src/features/sessions/SessionsView.tsx`)**:
+   - Compact display: Task title, Roadmap association badge, Done completion indicator, start-to-end time range (`14:10 → 15:30`), and duration badge (`1h 20m` / `۱ ساعت و ۲۰ دقیقه`).
+   - Responsive layout adapting gracefully from wide desktop monitors to narrow mobile viewports without horizontal overflow.
+   - Retains global filtered aggregate summary alongside per-day summaries.
+   - Clear distinction between "No sessions recorded yet" and "No sessions match the selected filters" with one-click filter reset.
+   - Respects independent 4-way matrix of Language (en / fa) and Calendar (Gregorian / Persian) preferences.
+
+
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Session, Task, Roadmap } from '../../domain';
 import { SessionHistoryFilter, SessionHistoryResult } from '../../application';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { ActiveSessionTimer } from './ActiveSessionTimer';
 import { ManualSessionModal } from './ManualSessionModal';
+import { groupSessionsByDay } from './sessionGrouping';
 import { useUserPreferences, getTranslation } from '../../app/preferences';
 import {
   Clock,
@@ -19,7 +20,7 @@ import {
 
 export const SessionsView: React.FC = () => {
   const application = useApplication();
-  const { formatDate, formatTime, formatNumeral, preferences } = useUserPreferences();
+  const { formatDate, formatTime, formatNumeral, formatDurationHoursMinutes, preferences } = useUserPreferences();
   const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, preferences.language);
 
   // Data state
@@ -134,26 +135,13 @@ export const SessionsView: React.FC = () => {
     ? availableTasks.filter((t) => t.roadmapId === filterRoadmapId)
     : availableTasks;
 
-  const formatSessionDate = (isoString: string) => {
-    return formatDate(isoString, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const formatSessionTime = (isoString: string) => {
-    return formatTime(isoString);
-  };
+  // Derive Daily Groups (Phase 9C-2)
+  const dayGroups = useMemo(() => {
+    return groupSessionsByDay(sessions, preferences);
+  }, [sessions, preferences]);
 
   const formattedHoursAndMinutes = () => {
-    const { hours, minutes } = historyResult.totalHoursAndMinutes;
-    if (preferences.language === 'fa') {
-      if (hours > 0) {
-        return `${formatNumeral(hours)} ساعت و ${formatNumeral(minutes)} دقیقه`;
-      }
-      return `${formatNumeral(minutes)} دقیقه`;
-    }
-    if (hours > 0) {
-      return `${formatNumeral(hours)}h ${formatNumeral(minutes)}m`;
-    }
-    return `${formatNumeral(minutes)}m`;
+    return formatDurationHoursMinutes(historyResult.totalMinutes);
   };
 
   return (
@@ -442,64 +430,95 @@ export const SessionsView: React.FC = () => {
             </button>
           </div>
         ) : (
-          /* Filtered Results List */
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-2xs">
-            {sessions.map((session) => {
-              const task = tasksMap[session.taskId];
-              const roadmap = task ? roadmapsMap[task.roadmapId] : undefined;
-              const dateFormatted = formatSessionDate(session.startedAt);
-              const startTime = formatSessionTime(session.startedAt);
-              const endTime = formatSessionTime(session.endedAt);
-
-              return (
-                <div
-                  key={session.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/30 transition"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">
-                        {task ? task.title : `Task #${session.taskId.slice(0, 8)}`}
+          /* Filtered Results List: Grouped by Calendar Day (Phase 9C-2) */
+          <div className="space-y-4">
+            {dayGroups.map((group) => (
+              <div
+                key={group.dateKey}
+                data-testid={`session-day-group-${group.dateKey}`}
+                className="rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-2xs transition-all"
+              >
+                {/* Daily Header: Date, Relative Label, and Daily Summary */}
+                <div className="px-4 py-3 bg-neutral-50/80 dark:bg-neutral-800/50 border-b border-neutral-200/80 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {group.relativeLabel && (
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100/70 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 tracking-tight">
+                        {group.relativeLabel}
                       </span>
-                      {roadmap && (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 font-medium">
-                          <Layers className="w-3 h-3 text-neutral-400" />
-                          {roadmap.title}
-                        </span>
-                      )}
-                      {task?.status === 'completed' && (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-medium">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Done
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs text-neutral-500 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {dateFormatted}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {startTime} – {endTime}
-                      </span>
-                    </div>
+                    )}
+                    <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                      {group.formattedDate}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-4 self-start sm:self-center shrink-0">
-                    <div className="text-right">
-                      <span className="text-base font-bold font-mono text-neutral-900 dark:text-neutral-100">
-                        {formatNumeral(session.durationMinutes)}{preferences.language === 'fa' ? ' دقیقه' : 'm'}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 block font-mono">
-                        duration
-                      </span>
-                    </div>
+                  {/* Daily Summary: session count · total focused time */}
+                  <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                    <span>{group.formattedSessionCount}</span>
+                    <span className="text-neutral-300 dark:text-neutral-600">·</span>
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                      {group.formattedTotalTime}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Session Rows within this day */}
+                <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                  {group.sessions.map((session) => {
+                    const task = tasksMap[session.taskId];
+                    const roadmap = task ? roadmapsMap[task.roadmapId] : undefined;
+                    const startTime = formatTime(session.startedAt);
+                    const endTime = formatTime(session.endedAt);
+                    const durationText = formatDurationHoursMinutes(session.durationMinutes);
+
+                    return (
+                      <div
+                        key={session.id}
+                        data-testid={`session-row-${session.id}`}
+                        className="p-3.5 sm:px-4 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-neutral-50/50 dark:hover:bg-neutral-800/25 transition"
+                      >
+                        {/* Task & Roadmap metadata */}
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
+                              {task ? task.title : `Task #${session.taskId.slice(0, 8)}`}
+                            </span>
+                            {task?.status === 'completed' && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 font-medium">
+                                <CheckCircle2 className="w-2.5 h-2.5" />
+                                Done
+                              </span>
+                            )}
+                          </div>
+
+                          {roadmap && (
+                            <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+                              <Layers className="w-3 h-3 text-neutral-400 shrink-0" />
+                              <span className="truncate">{roadmap.title}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Timing interval & Duration badge */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-neutral-800/40 shrink-0 text-xs">
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 font-mono text-[11px] sm:text-xs">
+                            <Clock className="w-3 h-3 text-neutral-400 shrink-0" />
+                            <span>{startTime}</span>
+                            <span className="text-neutral-400 mx-0.5">→</span>
+                            <span>{endTime}</span>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-mono font-semibold text-xs border border-neutral-200 dark:border-neutral-700">
+                              {durationText}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>

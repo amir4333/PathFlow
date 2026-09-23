@@ -20,6 +20,7 @@ import {
   formatTime as formatTimeWithPrefs,
   formatNumeral as formatNumeralWithPrefs,
   formatDurationMinutes as formatDurationWithPrefs,
+  formatDurationHoursMinutes as formatDurationHoursMinutesWithPrefs,
 } from './dateFormatting';
 import { getTranslation, TranslationKey } from './translations';
 
@@ -36,6 +37,7 @@ export interface UserPreferencesContextValue {
   formatTime: (timestamp: string | Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatNumeral: (value: string | number) => string;
   formatDurationMinutes: (minutes: number) => string;
+  formatDurationHoursMinutes: (minutes: number) => string;
   t: (key: TranslationKey) => string;
 }
 
@@ -118,6 +120,13 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
     [preferences]
   );
 
+  const formatDurationHoursMinutes = useCallback(
+    (minutes: number) => {
+      return formatDurationHoursMinutesWithPrefs(minutes, preferences);
+    },
+    [preferences]
+  );
+
   const t = useCallback(
     (key: TranslationKey) => {
       return getTranslation(key, preferences.language);
@@ -136,6 +145,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
       formatTime,
       formatNumeral,
       formatDurationMinutes,
+      formatDurationHoursMinutes,
       t,
     }),
     [
@@ -148,6 +158,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
       formatTime,
       formatNumeral,
       formatDurationMinutes,
+      formatDurationHoursMinutes,
       t,
     ]
   );
