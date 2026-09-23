@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
-import { Goal, Roadmap } from '../../domain';
+import { Goal, Roadmap, Task, TaskPriority, TaskStatus } from '../../domain';
 import { RoadmapDetailedProgress } from '../../domain/services/progressReview';
 import {
   MapPin,
@@ -16,6 +16,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { RoadmapFormModal } from './RoadmapFormModal';
+import { TaskList } from '../tasks/TaskList';
 
 interface RoadmapDetailViewProps {
   roadmapId: string;
@@ -27,6 +28,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
 
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [parentGoal, setParentGoal] = useState<Goal | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [progress, setProgress] = useState<RoadmapDetailedProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,15 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
         console.warn(`Parent goal ${fetchedRoadmap.goalId} not found`, err);
       }
 
-      // Fetch progress
+      // Fetch tasks for roadmap
+      try {
+        const fetchedTasks = await application.tasks.listTasksForRoadmap(roadmapId);
+        setTasks(fetchedTasks);
+      } catch (err) {
+        console.error('Failed to load tasks for roadmap', err);
+      }
+
+      // Fetch derived progress using real tasks
       try {
         const rProg = await application.progress.getRoadmapProgress(roadmapId);
         setProgress(rProg);
@@ -78,6 +88,67 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       description: data.description,
     });
     await loadRoadmapData();
+  };
+
+  const handleCreateTask = async (data: {
+    title: string;
+    description?: string;
+    priority?: TaskPriority;
+    estimatedMinutes?: number;
+  }) => {
+    try {
+      setActionError(null);
+      await application.tasks.createTask({
+        roadmapId,
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        estimatedMinutes: data.estimatedMinutes,
+      });
+      await loadRoadmapData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to create task.');
+      throw err;
+    }
+  };
+
+  const handleUpdateTask = async (
+    taskId: string,
+    data: {
+      title: string;
+      description?: string;
+      priority?: TaskPriority;
+      estimatedMinutes?: number;
+    }
+  ) => {
+    try {
+      setActionError(null);
+      await application.tasks.updateTask(taskId, data);
+      await loadRoadmapData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to update task.');
+      throw err;
+    }
+  };
+
+  const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    try {
+      setActionError(null);
+      await application.tasks.transitionTaskStatus(task.id, newStatus);
+      await loadRoadmapData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to change task status.');
+    }
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    try {
+      setActionError(null);
+      await application.tasks.deleteTask(task.id);
+      await loadRoadmapData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete task.');
+    }
   };
 
   if (isLoading) {
@@ -284,47 +355,19 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
         </div>
       </div>
 
-      {/* Task Section — Explicitly instructed:
-          "For the task section: Do NOT implement task management yet.
-           Instead provide a clean empty-state / placeholder explaining that tasks will be added in the next feature-integration phase.
-           Do not create fake task data."
-      */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <span>Milestone Action Units & Tasks</span>
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Discrete actionable work units mapped directly to this roadmap milestone.
-            </p>
-          </div>
-          <span className="text-xs font-mono text-neutral-400">Next Phase</span>
-        </div>
-
-        <div
-          id="roadmap-tasks-placeholder"
-          className="p-10 text-center bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-xl space-y-3"
-        >
-          <div className="w-10 h-10 mx-auto rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 flex items-center justify-center">
-            <CheckSquare className="w-5 h-5" />
-          </div>
-          <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              Task Management Integration Scheduled for Next Phase
-            </h3>
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Task creation, status lifecycle transitions, and time estimation units will be fully integrated into this roadmap view in the upcoming feature slice.
-            </p>
-          </div>
-          <div className="pt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-              <span>Goal → Roadmap slice complete</span>
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* Task Section */}
+      <TaskList
+        roadmapId={roadmap.id}
+        roadmapTitle={roadmap.title}
+        tasks={tasks}
+        onRefresh={loadRoadmapData}
+        onSelectTask={(task) => navigate('tasks', { id: task.id })}
+        onStatusChange={handleStatusChange}
+        onUpdateTask={handleUpdateTask}
+        onCreateTask={handleCreateTask}
+        onDeleteTask={handleDeleteTask}
+        errorMessage={actionError}
+      />
 
       {/* Edit Roadmap Modal */}
       <RoadmapFormModal

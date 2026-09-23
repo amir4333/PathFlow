@@ -215,6 +215,13 @@ export class TaskService {
   }
 
   /**
+   * Alias for transitionTaskStatus for backwards compatibility with tests and callers.
+   */
+  async updateTaskStatus(id: EntityId, targetStatus: TaskStatus): Promise<Task> {
+    return this.transitionTaskStatus(id, targetStatus);
+  }
+
+  /**
    * Deletes a Task after verifying no recorded Sessions or Weekly Plan items depend on it.
    */
   async deleteTask(id: EntityId): Promise<void> {

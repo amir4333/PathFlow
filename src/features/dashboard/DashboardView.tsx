@@ -25,6 +25,8 @@ export const DashboardView: React.FC = () => {
     completedGoals: number;
     totalRoadmaps: number;
     totalTasks: number;
+    activeTasks: number;
+    completedTasks: number;
     totalSessions: number;
     totalWeeklyPlans: number;
     totalActualMinutes: number;
@@ -35,6 +37,8 @@ export const DashboardView: React.FC = () => {
     completedGoals: 0,
     totalRoadmaps: 0,
     totalTasks: 0,
+    activeTasks: 0,
+    completedTasks: 0,
     totalSessions: 0,
     totalWeeklyPlans: 0,
     totalActualMinutes: 0,
@@ -56,6 +60,8 @@ export const DashboardView: React.FC = () => {
           const activeGoals = goals.filter((g) => g.status !== 'archived').length;
           const inProgressGoals = goals.filter((g) => g.status === 'in_progress').length;
           const completedGoals = goals.filter((g) => g.status === 'completed').length;
+          const activeTasks = tasks.filter((t) => t.status !== 'cancelled' && t.status !== 'completed').length;
+          const completedTasks = tasks.filter((t) => t.status === 'completed').length;
           const totalMinutes = sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
 
           setStats({
@@ -65,6 +71,8 @@ export const DashboardView: React.FC = () => {
             completedGoals,
             totalRoadmaps: roadmaps.length,
             totalTasks: tasks.length,
+            activeTasks,
+            completedTasks,
             totalSessions: sessions.length,
             totalWeeklyPlans: weeklyPlans.length,
             totalActualMinutes: totalMinutes,
@@ -144,7 +152,7 @@ export const DashboardView: React.FC = () => {
             </h2>
           </div>
           <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-            Phase 8: Active Goal & Roadmap Slice
+            Phase 8B: Goal → Roadmap → Task Slice
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
@@ -187,16 +195,19 @@ export const DashboardView: React.FC = () => {
             </span>
           </div>
 
-          <div className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-            <span className="text-xs text-neutral-500 block">Tasks in Backlog</span>
+          <button
+            onClick={() => navigate('tasks')}
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+          >
+            <span className="text-xs text-neutral-500 block">Tasks</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalTasks}</span>
-              <span className="text-xs text-neutral-400">units</span>
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.activeTasks}</span>
+              <span className="text-xs text-neutral-400">/ {stats.totalTasks} total</span>
             </div>
-            <span className="text-[10px] text-neutral-400 mt-1 block">
-              Next feature slice
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
+              {stats.completedTasks} completed
             </span>
-          </div>
+          </button>
         </div>
       </div>
 

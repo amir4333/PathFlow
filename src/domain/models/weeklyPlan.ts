@@ -59,7 +59,7 @@ export interface CreateWeeklyPlanParams {
   weekIdentifier: string;
   title?: string;
   targetMinutes?: number;
-  items?: readonly WeeklyPlanItem[];
+  items?: readonly (WeeklyPlanItem | CreateWeeklyPlanItemParams)[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -72,22 +72,20 @@ export function createWeeklyPlan(params: CreateWeeklyPlanParams): WeeklyPlan {
     : `Plan for ${weekIdentifier}`;
   const planId = params.id ?? generateEntityId();
 
+  // Ensure any attached items are associated with this plan ID if not already set
+  const items: WeeklyPlanItem[] = (params.items ?? []).map((item) => {
+    return createWeeklyPlanItem({
+      ...item,
+      weeklyPlanId: planId,
+    });
+  });
+
   // If targetMinutes is explicitly provided, use it.
   // Otherwise, default to the sum of planned item minutes if items are provided, or 0.
-  const itemsTotal = (params.items ?? []).reduce((sum, item) => sum + item.plannedMinutes, 0);
+  const itemsTotal = items.reduce((sum, item) => sum + item.plannedMinutes, 0);
   const targetMinutes = params.targetMinutes !== undefined
     ? Math.max(0, Math.round(params.targetMinutes))
     : itemsTotal;
-
-  // Ensure any attached items are associated with this plan ID if not already set
-  const items = (params.items ?? []).map((item) => {
-    const id = item.id && item.id.trim().length > 0 ? item.id : generateEntityId();
-    const weeklyPlanId = item.weeklyPlanId === planId ? item.weeklyPlanId : planId;
-    if (item.id !== id || item.weeklyPlanId !== weeklyPlanId) {
-      return { ...item, id, weeklyPlanId };
-    }
-    return item;
-  });
 
   return {
     id: planId,

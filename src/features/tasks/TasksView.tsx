@@ -1,20 +1,14 @@
 import React from 'react';
-import { PlaceholderView } from '../../components/ui/PlaceholderView';
+import { useRouter } from '../../app/providers/RouterProvider';
+import { TaskListView } from './TaskListView';
+import { TaskDetailView } from './TaskDetailView';
 
 export const TasksView: React.FC = () => {
-  return (
-    <PlaceholderView
-      routeId="tasks"
-      title="Tasks & Work Units"
-      description="Atomic, actionable work items tied directly to specific roadmap milestones."
-      plannedPhase="Phase 2 (Data Modeling & Domain Logic)"
-      workflowStep="Task"
-      responsibilities={[
-        'Define granular work units with estimated duration and urgency.',
-        'Strictly tie tasks to roadmap milestones (preventing aimless task lists).',
-        'State lifecycle transitions (Pending, Active, In-Session, Completed).',
-        'Offline optimistic mutation support with conflict-free identity.',
-      ]}
-    />
-  );
+  const { params } = useRouter();
+
+  if (params.id) {
+    return <TaskDetailView taskId={params.id} />;
+  }
+
+  return <TaskListView />;
 };

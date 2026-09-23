@@ -122,7 +122,6 @@ export class SessionService {
       taskId: input.taskId,
       startedAt: input.startedAt,
       endedAt: input.endedAt,
-      notes: input.notes,
     });
 
     const validation = validateSession(session);
@@ -155,6 +154,13 @@ export class SessionService {
     } catch (err) {
       handleRepositoryError(err, `Failed to list sessions for Task "${taskId}".`);
     }
+  }
+
+  /**
+   * Alias for listSessionsForTask
+   */
+  async getSessionsForTask(taskId: EntityId): Promise<Session[]> {
+    return this.listSessionsForTask(taskId);
   }
 
   /**

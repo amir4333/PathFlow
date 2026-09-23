@@ -165,7 +165,7 @@ test('Session Integrity: Prevents starting multiple active sessions concurrently
     async () => {
       await repos.sessions.startActiveSession(task2.id);
     },
-    (err: unknown) => {
+    (err: any) => {
       assert.ok(err instanceof ActiveSessionConflictError);
       assert.equal(err.activeTaskId, task1.id);
       return true;
@@ -217,9 +217,9 @@ test('Session Integrity: Handles invalid time ranges safely (e.g. endedAt preced
     async () => {
       await repos.sessions.stopActiveSession(invalidEndedAt);
     },
-    (err: unknown) => {
+    (err: any) => {
       assert.ok(err instanceof DomainValidationError);
-      assert.ok(err.validationErrors.some((e) => e.includes('precede startedAt')));
+      assert.ok(err.validationErrors.some((e: string) => e.includes('precede startedAt')));
       return true;
     }
   );
