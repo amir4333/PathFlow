@@ -14,6 +14,8 @@ import {
   createSession,
   validateSession,
   isValidEntityId,
+  isValidTimestamp,
+  calculateDurationMinutes,
   isValidDateString,
   isValidWeekIdentifier,
 } from '../../domain';
@@ -113,9 +115,41 @@ export class SessionService {
       throw new ValidationError(['Task ID must be a valid non-empty identifier.']);
     }
 
+    const currentActive = await this.sessionRepo.getActiveSession();
+    if (currentActive) {
+      throw new ActiveSessionConflictError(
+        `Cannot record manual session: an active session is currently in progress for Task "${currentActive.taskId}". Please complete or discard the active timer first.`,
+        currentActive.taskId
+      );
+    }
+
     const task = await this.taskRepo.getById(input.taskId);
     if (!task) {
       throw new NotFoundError('Task', input.taskId);
+    }
+
+    if (!isValidTimestamp(input.startedAt) || !isValidTimestamp(input.endedAt)) {
+      throw new ValidationError(['Start and end times must be valid ISO timestamps.']);
+    }
+
+    const startMs = Date.parse(input.startedAt);
+    const endMs = Date.parse(input.endedAt);
+    if (isNaN(startMs) || isNaN(endMs)) {
+      throw new ValidationError(['Invalid date format provided for start or end time.']);
+    }
+
+    if (endMs <= startMs) {
+      throw new ValidationError(['End time must be after start time.']);
+    }
+
+    const nowMs = Date.now();
+    if (startMs > nowMs + 60000) {
+      throw new ValidationError(['Session cannot start in the future.']);
+    }
+
+    const duration = calculateDurationMinutes(input.startedAt, input.endedAt);
+    if (duration <= 0) {
+      throw new ValidationError(['Session duration must be at least 1 minute.']);
     }
 
     const session = createSession({
@@ -203,6 +237,21 @@ export class SessionService {
       return await this.sessionRepo.getAll();
     } catch (err) {
       handleRepositoryError(err, 'Failed to list all sessions.');
+    }
+  }
+
+  /**
+   * Retrieves a single session by its unique ID.
+   */
+  async getSession(sessionId: EntityId): Promise<Session | null> {
+    if (!isValidEntityId(sessionId)) {
+      throw new ValidationError(['Session ID must be a valid non-empty identifier.']);
+    }
+
+    try {
+      return await this.sessionRepo.getById(sessionId);
+    } catch (err) {
+      handleRepositoryError(err, `Failed to fetch session "${sessionId}".`);
     }
   }
 }

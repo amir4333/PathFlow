@@ -4,6 +4,7 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { useActiveSession } from '../sessions/ActiveSessionContext';
 import { Task, Roadmap, Goal, TaskStatus, TaskPriority, canTransitionTaskStatus } from '../../domain';
 import { TaskFormModal } from './TaskFormModal';
+import { ManualSessionModal } from '../sessions/ManualSessionModal';
 import { getPriorityBadge, getStatusConfig } from './TaskCard';
 import {
   ArrowLeft,
@@ -48,6 +49,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
   // Delete modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Manual session modal
+  const [isManualSessionModalOpen, setIsManualSessionModalOpen] = useState(false);
   // Status dropdown
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
@@ -243,21 +246,31 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
             </button>
           ) : (
             task && task.status !== 'completed' && task.status !== 'cancelled' && (
-              <button
-                id="btn-start-task-session"
-                onClick={async () => {
-                  try {
-                    await startSession(task.id);
-                    navigate('sessions');
-                  } catch (err: unknown) {
-                    setActionError(err instanceof Error ? err.message : 'Failed to start session');
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 cursor-pointer transition shadow-2xs"
-              >
-                <Play className="w-3 h-3 fill-current" />
-                <span>Start Session</span>
-              </button>
+              <>
+                <button
+                  id="btn-start-task-session"
+                  onClick={async () => {
+                    try {
+                      await startSession(task.id);
+                      navigate('sessions');
+                    } catch (err: unknown) {
+                      setActionError(err instanceof Error ? err.message : 'Failed to start session');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 cursor-pointer transition shadow-2xs"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Start Session</span>
+                </button>
+                <button
+                  id="btn-manual-task-session"
+                  onClick={() => setIsManualSessionModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Log Past Session</span>
+                </button>
+              </>
             )
           )}
 
@@ -527,6 +540,16 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
           </div>
         </div>
       )}
+
+      {/* Manual Session Modal */}
+      <ManualSessionModal
+        isOpen={isManualSessionModalOpen}
+        onClose={() => setIsManualSessionModalOpen(false)}
+        preselectedTaskId={task.id}
+        onSessionCreated={() => {
+          loadTaskData();
+        }}
+      />
     </div>
   );
 };

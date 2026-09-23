@@ -166,3 +166,24 @@ Phase 9A exposes the underlying Session & Time Tracking engine to users through 
    - **Task Detail (`src/features/tasks/TaskDetailView.tsx`)**: Allows direct timer invocation from specific tasks.
    - **Sessions View (`src/features/sessions/SessionsView.tsx`)**: Dedicated session hub featuring the timer and immutable completed session history.
 
+---
+
+## 7. Phase 9B: Manual Session Entry
+
+Phase 9B allows users to record completed work sessions executed offline or without running the active live timer:
+
+1. **ManualSessionModal (`src/features/sessions/ManualSessionModal.tsx`)**:
+   - Form allowing selection of an existing Task, Start Time, and End Time using local datetime pickers.
+   - Automatically derives and displays duration in real time without requiring manual duration entry.
+   - Enforces active session conflict safeguards: prevents recording conflicting manual sessions while a live timer is running, displaying an informative warning banner without automatically terminating the running timer.
+   - Validates that end time succeeds start time, timestamps are valid ISO dates, duration is positive (>= 1 minute), and sessions do not start in the future.
+
+2. **SessionService Extension (`src/application/sessions/sessionService.ts`)**:
+   - `createManualSession(input)`: Validates task existence, checks for active session conflict (`ActiveSessionConflictError`), validates timestamps and duration constraints, constructs the immutable domain `Session`, and persists via `SessionRepository`.
+   - `getSession(sessionId)`: Provides direct single-session lookups.
+
+3. **UI Integration**:
+   - **Sessions View (`src/features/sessions/SessionsView.tsx`)**: Provides "Log Manual Session" actions in the view header, empty state, and history list. Immediately refreshes session history upon creation.
+   - **Task Detail View (`src/features/tasks/TaskDetailView.tsx`)**: Allows quick logging of past sessions directly associated with a specific task.
+
+
