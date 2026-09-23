@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Task, Roadmap, Session } from '../../domain';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useActiveSession } from './ActiveSessionContext';
+import { useUserPreferences } from '../../app/preferences';
 import {
   X,
   Clock,
@@ -39,6 +40,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
 }) => {
   const application = useApplication();
   const { activeSession, activeTask } = useActiveSession();
+  const { formatDate, formatTime, preferences } = useUserPreferences();
 
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [roadmapsMap, setRoadmapsMap] = useState<Record<string, Roadmap>>({});
@@ -341,6 +343,18 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
               />
             </div>
           </div>
+
+          {/* Presentation Format Preview in Active Calendar */}
+          {startTimeLocal && (
+            <div className="text-[11px] text-neutral-500 bg-neutral-50 dark:bg-neutral-800/40 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+              <span className="font-medium text-neutral-600 dark:text-neutral-400">
+                Display Preview ({preferences.calendar}):
+              </span>
+              <span className="font-mono font-semibold text-neutral-800 dark:text-neutral-200">
+                {formatDate(startTimeLocal, { dateStyle: 'medium' })} • {formatTime(startTimeLocal)}
+              </span>
+            </div>
+          )}
 
           {/* Derived Duration Calculation Box */}
           <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">

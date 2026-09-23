@@ -3,6 +3,7 @@ import { Task, Session } from '../../domain';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useActiveSession } from './ActiveSessionContext';
+import { useUserPreferences } from '../../app/preferences';
 import {
   Play,
   Square,
@@ -27,6 +28,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
 }) => {
   const application = useApplication();
   const { navigate } = useRouter();
+  const { formatTime, formatDate } = useUserPreferences();
   const {
     activeSession,
     activeTask,
@@ -156,10 +158,8 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
 
   // Active Session Running UI
   if (activeSession) {
-    const startedDate = new Date(activeSession.startedAt);
-    const timeFormatted = isNaN(startedDate.getTime())
-      ? activeSession.startedAt
-      : startedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeFormatted = formatTime(activeSession.startedAt);
+    const dateFormatted = formatDate(activeSession.startedAt, { month: 'short', day: 'numeric' });
 
     return (
       <div
@@ -179,7 +179,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
               </span>
               <span className="text-xs text-neutral-500 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                Started at {timeFormatted}
+                <span>Started: {dateFormatted} • {timeFormatted}</span>
               </span>
             </div>
 

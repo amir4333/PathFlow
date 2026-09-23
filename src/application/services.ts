@@ -41,7 +41,11 @@ export function createApplicationServices(
     repositories.sessions,
     repositories.weeklyPlanItems
   );
-  const sessionService = new SessionService(repositories.sessions, repositories.tasks);
+  const sessionService = new SessionService(
+    repositories.sessions,
+    repositories.tasks,
+    repositories.roadmaps
+  );
   const weeklyPlanningService = new WeeklyPlanningService(
     repositories.weeklyPlans,
     repositories.weeklyPlanItems,

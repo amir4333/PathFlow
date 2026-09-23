@@ -11,7 +11,8 @@ export type AppRouteId =
   | 'sessions'
   | 'weekly-plans'
   | 'progress'
-  | 'teacher';
+  | 'teacher'
+  | 'settings';
 
 export interface RouteDefinition {
   id: AppRouteId;
@@ -77,5 +78,12 @@ export const APP_ROUTES: RouteDefinition[] = [
     description: 'Controlled read-only progress sharing and mentor review portal.',
     plannedPhase: 'Phase 4 (Collaboration & Sync Protocol)',
     category: 'collaboration',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    description: 'Language, calendar system, and presentation preferences.',
+    plannedPhase: 'Cross-Cutting',
+    category: 'core',
   },
 ];

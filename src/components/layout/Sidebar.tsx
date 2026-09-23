@@ -13,6 +13,7 @@ import {
   GraduationCap,
   ShieldAlert,
   Compass,
+  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ const ROUTE_ICONS: Record<AppRouteId, React.ComponentType<{ className?: string }
   'weekly-plans': Calendar,
   progress: TrendingUp,
   teacher: GraduationCap,
+  settings: Settings,
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile }) => {
@@ -152,6 +154,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
               </button>
             );
           })}
+        </div>
+
+        <div>
+          <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Preferences
+          </div>
+          <button
+            id="nav-link-settings"
+            onClick={() => handleSelect('settings')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left ${
+              currentRoute === 'settings'
+                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="w-4 h-4 shrink-0" />
+              <span>Settings</span>
+            </div>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded ${
+                currentRoute === 'settings'
+                  ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold'
+              }`}
+            >
+              Active
+            </span>
+          </button>
         </div>
       </div>
 

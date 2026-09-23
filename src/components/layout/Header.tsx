@@ -2,7 +2,8 @@ import React from 'react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { APP_ROUTES } from '../../app/routes/routes';
 import { useActiveSession } from '../../features/sessions/ActiveSessionContext';
-import { Menu, ShieldCheck, WifiOff, Clock } from 'lucide-react';
+import { useUserPreferences } from '../../app/preferences';
+import { Menu, ShieldCheck, WifiOff, Clock, Settings } from 'lucide-react';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -11,6 +12,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const { currentRoute, params, navigate } = useRouter();
   const { activeSession, activeTask, formattedTime } = useActiveSession();
+  const { preferences } = useUserPreferences();
   const activeRoute = APP_ROUTES.find((r) => r.id === currentRoute) || APP_ROUTES[0];
 
   return (
@@ -71,6 +73,24 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <WifiOff className="w-3.5 h-3.5 text-neutral-500" />
           <span>Offline-First</span>
         </div>
+
+        {/* Settings button */}
+        <button
+          id="btn-header-settings"
+          onClick={() => navigate('settings')}
+          className={`p-1.5 rounded-lg border text-xs cursor-pointer transition flex items-center gap-1.5 ${
+            currentRoute === 'settings'
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white'
+              : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+          }`}
+          title="Settings & Preferences"
+          aria-label="Settings"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span className="hidden lg:inline text-[10px] font-mono uppercase font-semibold">
+            {preferences.language} • {preferences.calendar === 'persian' ? 'FA' : 'EN'}
+          </span>
+        </button>
       </div>
     </header>
   );

@@ -19,7 +19,7 @@ import {
   isValidDateString,
   isValidWeekIdentifier,
 } from '../../domain';
-import { SessionRepository, TaskRepository } from '../../data/repositories/interfaces';
+import { SessionRepository, TaskRepository, RoadmapRepository } from '../../data/repositories/interfaces';
 import {
   ValidationError,
   NotFoundError,
@@ -28,11 +28,14 @@ import {
   handleRepositoryError,
 } from '../errors';
 import { CreateManualSessionInput } from '../types';
+import { SessionHistoryFilter, SessionHistoryResult } from './types';
+import { resolveDateRangeBoundaries } from './dateRangeResolution';
 
 export class SessionService {
   constructor(
     private readonly sessionRepo: SessionRepository,
-    private readonly taskRepo: TaskRepository
+    private readonly taskRepo: TaskRepository,
+    private readonly roadmapRepo?: RoadmapRepository
   ) {}
 
   /**
@@ -253,5 +256,104 @@ export class SessionService {
     } catch (err) {
       handleRepositoryError(err, `Failed to fetch session "${sessionId}".`);
     }
+  }
+
+  /**
+   * Queries completed session history with optional multi-dimensional filtering,
+   * deterministic newest-first sorting, and derived duration aggregation.
+   *
+   * Supported filters:
+   * - startDate: optional start boundary (calendar date or timestamp)
+   * - endDate: optional end boundary (calendar date or timestamp)
+   * - taskId: optional task ID
+   * - roadmapId: optional roadmap ID (filters to all tasks under this roadmap)
+   */
+  async querySessionHistory(filter: SessionHistoryFilter = {}): Promise<SessionHistoryResult> {
+    // 1. Resolve date boundaries if provided
+    const { startIso, endIso } = resolveDateRangeBoundaries(filter.startDate, filter.endDate);
+
+    // 2. Validate Task filter if provided
+    if (filter.taskId !== undefined) {
+      if (!isValidEntityId(filter.taskId)) {
+        throw new ValidationError(['Task ID filter must be a valid non-empty identifier.']);
+      }
+      const task = await this.taskRepo.getById(filter.taskId);
+      if (!task) {
+        throw new NotFoundError('Task', filter.taskId);
+      }
+    }
+
+    // 3. Validate Roadmap filter if provided
+    let roadmapTaskIds: Set<EntityId> | null = null;
+    if (filter.roadmapId !== undefined) {
+      if (!isValidEntityId(filter.roadmapId)) {
+        throw new ValidationError(['Roadmap ID filter must be a valid non-empty identifier.']);
+      }
+      if (this.roadmapRepo) {
+        const roadmap = await this.roadmapRepo.getById(filter.roadmapId);
+        if (!roadmap) {
+          throw new NotFoundError('Roadmap', filter.roadmapId);
+        }
+      }
+      const tasksInRoadmap = await this.taskRepo.getByRoadmapId(filter.roadmapId);
+      roadmapTaskIds = new Set(tasksInRoadmap.map((t) => t.id));
+
+      // If both taskId and roadmapId are specified, and the task doesn't belong to the roadmap,
+      // no sessions can match both constraints.
+      if (filter.taskId && !roadmapTaskIds.has(filter.taskId)) {
+        return {
+          sessions: [],
+          totalSessions: 0,
+          totalMinutes: 0,
+          totalHoursAndMinutes: { hours: 0, minutes: 0 },
+        };
+      }
+    }
+
+    // 4. Retrieve candidate sessions using repository
+    let sessions: Session[];
+    try {
+      if (filter.taskId) {
+        sessions = await this.sessionRepo.getByTaskId(filter.taskId);
+      } else if (startIso && endIso) {
+        sessions = await this.sessionRepo.getByDateRange(startIso, endIso);
+      } else {
+        sessions = await this.sessionRepo.getAll();
+      }
+    } catch (err) {
+      handleRepositoryError(err, 'Failed to query session history.');
+    }
+
+    // 5. Apply memory filtering for all active constraints
+    const filtered = sessions.filter((s) => {
+      if (startIso && s.startedAt < startIso) return false;
+      if (endIso && s.startedAt > endIso) return false;
+      if (filter.taskId && s.taskId !== filter.taskId) return false;
+      if (roadmapTaskIds !== null && !roadmapTaskIds.has(s.taskId)) return false;
+      return true;
+    });
+
+    // 6. Deterministic sorting: Newest session first (startedAt descending, tie-breaker on ID)
+    const sorted = [...filtered].sort((a, b) => {
+      const timeDiff = Date.parse(b.startedAt) - Date.parse(a.startedAt);
+      if (timeDiff !== 0) return timeDiff;
+      return b.id.localeCompare(a.id);
+    });
+
+    // 7. Calculate derived aggregations
+    const totalSessions = sorted.length;
+    const totalMinutes = sorted.reduce((sum, s) => sum + s.durationMinutes, 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return {
+      sessions: sorted,
+      totalSessions,
+      totalMinutes,
+      totalHoursAndMinutes: {
+        hours,
+        minutes,
+      },
+    };
   }
 }

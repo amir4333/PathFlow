@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts"
+    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts tests/unit/userPreferencesAndCalendar.test.ts tests/unit/sessionHistoryQuery.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

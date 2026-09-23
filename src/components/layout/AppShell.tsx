@@ -10,6 +10,7 @@ import { SessionsView } from '../../features/sessions/SessionsView';
 import { WeeklyPlansView } from '../../features/weekly-plans/WeeklyPlansView';
 import { ProgressView } from '../../features/progress/ProgressView';
 import { TeacherView } from '../../features/teacher/TeacherView';
+import { SettingsView } from '../../features/settings/SettingsView';
 
 export const AppShell: React.FC = () => {
   const { currentRoute } = useRouter();
@@ -33,6 +34,8 @@ export const AppShell: React.FC = () => {
         return <ProgressView />;
       case 'teacher':
         return <TeacherView />;
+      case 'settings':
+        return <SettingsView />;
       default:
         return <DashboardView />;
     }
