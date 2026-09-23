@@ -1328,3 +1328,359 @@ export function generateProgressReviewReport(params: {
     activityByTask,
   };
 }
+
+// =============================================================================
+// J. Comprehensive Period Review (Phase 11A Core)
+// =============================================================================
+
+export interface PeriodSpecification {
+  readonly type: 'this-week' | 'last-week' | 'custom';
+  readonly startDate: string; // YYYY-MM-DD
+  readonly endDate: string;   // YYYY-MM-DD
+  readonly weekIdentifier?: string; // e.g. "2026-W39"
+  readonly label: string;
+}
+
+export interface GoalPeriodProgress {
+  readonly goalId: EntityId;
+  readonly title: string;
+  readonly status: string;
+  readonly totalRoadmaps: number;
+  readonly totalTasks: number;
+  readonly completedTasks: number;
+  readonly taskCompletionPercentage: number;
+  readonly plannedMinutes: number;
+  readonly actualMinutes: number;
+  readonly hasActivityInPeriod: boolean;
+}
+
+export interface RoadmapPeriodProgress {
+  readonly roadmapId: EntityId;
+  readonly title: string;
+  readonly goalId: EntityId;
+  readonly goalTitle: string;
+  readonly totalTasks: number;
+  readonly completedTasks: number;
+  readonly taskCompletionPercentage: number;
+  readonly plannedMinutes: number;
+  readonly actualMinutes: number;
+  readonly hasActivityInPeriod: boolean;
+}
+
+export interface TaskPeriodActivity {
+  readonly taskId: EntityId;
+  readonly title: string;
+  readonly roadmapId?: EntityId;
+  readonly roadmapTitle: string;
+  readonly status: TaskStatus;
+  readonly isCompleted: boolean;
+  readonly plannedMinutes: number;
+  readonly actualMinutes: number;
+  readonly sessionCount: number;
+}
+
+export interface DailyPeriodReview {
+  readonly date: string; // YYYY-MM-DD
+  readonly dayOfWeek: number; // 1 = Monday ... 7 = Sunday
+  readonly plannedMinutes: number;
+  readonly actualMinutes: number;
+  readonly sessionCount: number;
+  readonly tasksWorkedOnCount: number;
+  readonly tasksCompletedCount: number;
+}
+
+export interface ComprehensivePeriodReview {
+  readonly period: PeriodSpecification;
+  readonly summary: {
+    readonly totalPlannedMinutes: number;
+    readonly totalActualMinutes: number;
+    readonly varianceMinutes: number; // actual - planned
+    readonly timeCompletionPercentage: number;
+    readonly tasksWorkedOnCount: number;
+    readonly tasksCompletedCount: number;
+    readonly plannedCommitmentsCount: number;
+    readonly completedCommitmentsCount: number;
+  };
+  readonly goals: readonly GoalPeriodProgress[];
+  readonly roadmaps: readonly RoadmapPeriodProgress[];
+  readonly tasks: readonly TaskPeriodActivity[];
+  readonly dailyBreakdown: readonly DailyPeriodReview[];
+}
+
+export function calculateComprehensivePeriodReview(params: {
+  readonly period: PeriodSpecification;
+  readonly sessions: readonly Session[];
+  readonly tasks: readonly Task[];
+  readonly roadmaps: readonly Roadmap[];
+  readonly goals: readonly Goal[];
+  readonly weeklyPlans: readonly WeeklyPlan[];
+}): ComprehensivePeriodReview {
+  const { period, sessions, tasks, roadmaps, goals, weeklyPlans } = params;
+  const { startDate, endDate, weekIdentifier } = period;
+
+  // 1. Identify relevant sessions in range
+  const validSessions = sessions.filter(
+    (s) =>
+      isValidSession(s) &&
+      s.startedAt.split('T')[0] >= startDate &&
+      s.startedAt.split('T')[0] <= endDate
+  );
+
+  const totalActualMinutes = validSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  // 2. Identify relevant planned items in period
+  // If weekIdentifier is present, use that specific weekly plan
+  let plannedItems: Array<{
+    readonly id: string;
+    readonly taskId: string;
+    readonly plannedMinutes: number;
+    readonly targetDate?: string;
+    readonly isCompleted: boolean;
+  }> = [];
+
+  if (weekIdentifier) {
+    const plan = weeklyPlans.find((p) => p.weekIdentifier === weekIdentifier);
+    if (plan) {
+      plannedItems = [...plan.items];
+    }
+  } else {
+    // Custom range: include dated items in range, plus flexible items for plans whose full week is in range
+    for (const plan of weeklyPlans) {
+      const planRange = getWeekPeriod(plan.weekIdentifier);
+      const isPlanFullyInRange = planRange.startDate >= startDate && planRange.endDate <= endDate;
+
+      for (const item of plan.items) {
+        if (item.targetDate) {
+          if (item.targetDate >= startDate && item.targetDate <= endDate) {
+            plannedItems.push(item);
+          }
+        } else if (isPlanFullyInRange) {
+          plannedItems.push(item);
+        }
+      }
+    }
+  }
+
+  const totalPlannedMinutes = plannedItems.reduce((sum, item) => sum + item.plannedMinutes, 0);
+  const plannedCommitmentsCount = plannedItems.length;
+  const completedCommitmentsCount = plannedItems.filter((item) => item.isCompleted).length;
+
+  const varianceMinutes = totalActualMinutes - totalPlannedMinutes;
+  const timeCompletionPercentage =
+    totalPlannedMinutes > 0 ? Math.round((totalActualMinutes / totalPlannedMinutes) * 100) : 0;
+
+  // Maps for fast lookups
+  const taskMap = new Map(tasks.map((t) => [t.id, t]));
+  const roadmapMap = new Map(roadmaps.map((r) => [r.id, r]));
+  const goalMap = new Map(goals.map((g) => [g.id, g]));
+
+  // 3. Task Activity aggregation
+  const taskSessionsMap = new Map<string, { minutes: number; count: number }>();
+  for (const s of validSessions) {
+    const curr = taskSessionsMap.get(s.taskId) ?? { minutes: 0, count: 0 };
+    taskSessionsMap.set(s.taskId, {
+      minutes: curr.minutes + s.durationMinutes,
+      count: curr.count + 1,
+    });
+  }
+
+  const taskPlannedMap = new Map<string, number>();
+  for (const item of plannedItems) {
+    const curr = taskPlannedMap.get(item.taskId) ?? 0;
+    taskPlannedMap.set(item.taskId, curr + item.plannedMinutes);
+  }
+
+  const allRelevantTaskIds = new Set<string>([
+    ...taskSessionsMap.keys(),
+    ...taskPlannedMap.keys(),
+  ]);
+
+  const taskActivities: TaskPeriodActivity[] = [];
+  let tasksCompletedCount = 0;
+
+  for (const taskId of allRelevantTaskIds) {
+    const task = taskMap.get(taskId);
+    const sessionData = taskSessionsMap.get(taskId) ?? { minutes: 0, count: 0 };
+    const plannedForTask = taskPlannedMap.get(taskId) ?? 0;
+    const isCompleted = task?.status === 'completed';
+
+    if (isCompleted) {
+      tasksCompletedCount++;
+    }
+
+    const rTitle = task?.roadmapId ? roadmapMap.get(task.roadmapId)?.title ?? 'General' : 'General';
+
+    taskActivities.push({
+      taskId,
+      title: task?.title ?? 'Unknown Task',
+      roadmapId: task?.roadmapId,
+      roadmapTitle: rTitle,
+      status: task?.status ?? 'todo',
+      isCompleted,
+      plannedMinutes: plannedForTask,
+      actualMinutes: sessionData.minutes,
+      sessionCount: sessionData.count,
+    });
+  }
+
+  // Sort tasks by actual minutes descending, then planned minutes descending
+  taskActivities.sort((a, b) => b.actualMinutes - a.actualMinutes || b.plannedMinutes - a.plannedMinutes);
+
+  const tasksWorkedOnCount = taskSessionsMap.size;
+
+  // 4. Roadmap-level Progress
+  const roadmapsProgress: RoadmapPeriodProgress[] = roadmaps.map((roadmap) => {
+    const rProg = calculateDetailedRoadmapProgress(roadmap, tasks, sessions, weeklyPlans);
+    const parentGoal = goalMap.get(roadmap.goalId);
+
+    // Compute period-specific minutes for this roadmap
+    let rActual = 0;
+    let rPlanned = 0;
+
+    const rTaskIds = new Set(tasks.filter((t) => t.roadmapId === roadmap.id).map((t) => t.id));
+    for (const [tId, sData] of taskSessionsMap.entries()) {
+      if (rTaskIds.has(tId)) {
+        rActual += sData.minutes;
+      }
+    }
+    for (const [tId, pMinutes] of taskPlannedMap.entries()) {
+      if (rTaskIds.has(tId)) {
+        rPlanned += pMinutes;
+      }
+    }
+
+    const hasActivity = rActual > 0 || rPlanned > 0;
+
+    return {
+      roadmapId: roadmap.id,
+      title: roadmap.title,
+      goalId: roadmap.goalId,
+      goalTitle: parentGoal?.title ?? 'General',
+      totalTasks: rProg.totalTasks,
+      completedTasks: rProg.completedTasks,
+      taskCompletionPercentage: rProg.taskCompletionPercentage,
+      plannedMinutes: rPlanned,
+      actualMinutes: rActual,
+      hasActivityInPeriod: hasActivity,
+    };
+  });
+
+  // Sort: active roadmaps first (by activity), then title
+  roadmapsProgress.sort((a, b) => {
+    if (a.hasActivityInPeriod !== b.hasActivityInPeriod) {
+      return a.hasActivityInPeriod ? -1 : 1;
+    }
+    const aTotal = a.actualMinutes + a.plannedMinutes;
+    const bTotal = b.actualMinutes + b.plannedMinutes;
+    if (aTotal !== bTotal) return bTotal - aTotal;
+    return a.title.localeCompare(b.title);
+  });
+
+  // 5. Goal-level Progress
+  const goalsProgress: GoalPeriodProgress[] = goals.map((goal) => {
+    const gProg = calculateDetailedGoalProgress(goal, roadmaps, tasks, sessions, weeklyPlans);
+    const gRoadmapIds = new Set(roadmaps.filter((r) => r.goalId === goal.id).map((r) => r.id));
+    const gTaskIds = new Set(tasks.filter((t) => gRoadmapIds.has(t.roadmapId)).map((t) => t.id));
+
+    let gActual = 0;
+    let gPlanned = 0;
+
+    for (const [tId, sData] of taskSessionsMap.entries()) {
+      if (gTaskIds.has(tId)) {
+        gActual += sData.minutes;
+      }
+    }
+    for (const [tId, pMinutes] of taskPlannedMap.entries()) {
+      if (gTaskIds.has(tId)) {
+        gPlanned += pMinutes;
+      }
+    }
+
+    const hasActivity = gActual > 0 || gPlanned > 0;
+
+    return {
+      goalId: goal.id,
+      title: goal.title,
+      status: goal.status,
+      totalRoadmaps: gProg.totalRoadmaps,
+      totalTasks: gProg.totalTasks,
+      completedTasks: gProg.completedTasks,
+      taskCompletionPercentage: gProg.taskCompletionPercentage,
+      plannedMinutes: gPlanned,
+      actualMinutes: gActual,
+      hasActivityInPeriod: hasActivity,
+    };
+  });
+
+  goalsProgress.sort((a, b) => {
+    if (a.hasActivityInPeriod !== b.hasActivityInPeriod) {
+      return a.hasActivityInPeriod ? -1 : 1;
+    }
+    const aTotal = a.actualMinutes + a.plannedMinutes;
+    const bTotal = b.actualMinutes + b.plannedMinutes;
+    if (aTotal !== bTotal) return bTotal - aTotal;
+    return a.title.localeCompare(b.title);
+  });
+
+  // 6. Daily Breakdown for each day in range
+  const dates = getDatesInRange({ startDate, endDate });
+  const dailyBreakdown: DailyPeriodReview[] = dates.map((dateStr) => {
+    const dayDate = new Date(`${dateStr}T12:00:00.000Z`);
+    const dayOfWeek = dayDate.getUTCDay() === 0 ? 7 : dayDate.getUTCDay();
+
+    // Actual sessions for this day
+    const daySessions = validSessions.filter((s) => s.startedAt.startsWith(dateStr));
+    const dayActualMinutes = daySessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+
+    // Planned items specifically targeted for this day
+    let dayPlannedMinutes = 0;
+    const dayPlannedTaskIds = new Set<string>();
+    for (const plan of weeklyPlans) {
+      for (const item of plan.items) {
+        if (item.targetDate === dateStr) {
+          dayPlannedMinutes += item.plannedMinutes;
+          dayPlannedTaskIds.add(item.taskId);
+        }
+      }
+    }
+
+    const dayWorkedTaskIds = new Set(daySessions.map((s) => s.taskId));
+    const combinedDayTaskIds = new Set([...dayWorkedTaskIds, ...dayPlannedTaskIds]);
+
+    let dayTasksCompletedCount = 0;
+    for (const tId of combinedDayTaskIds) {
+      if (taskMap.get(tId)?.status === 'completed') {
+        dayTasksCompletedCount++;
+      }
+    }
+
+    return {
+      date: dateStr,
+      dayOfWeek,
+      plannedMinutes: dayPlannedMinutes,
+      actualMinutes: dayActualMinutes,
+      sessionCount: daySessions.length,
+      tasksWorkedOnCount: dayWorkedTaskIds.size,
+      tasksCompletedCount: dayTasksCompletedCount,
+    };
+  });
+
+  return {
+    period,
+    summary: {
+      totalPlannedMinutes,
+      totalActualMinutes,
+      varianceMinutes,
+      timeCompletionPercentage,
+      tasksWorkedOnCount,
+      tasksCompletedCount,
+      plannedCommitmentsCount,
+      completedCommitmentsCount,
+    },
+    goals: goalsProgress,
+    roadmaps: roadmapsProgress,
+    tasks: taskActivities,
+    dailyBreakdown,
+  };
+}
+

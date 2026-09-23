@@ -22,6 +22,9 @@ import {
   ProgressTimePoint,
   DateActivityItem,
   TaskActivityItem,
+  PeriodSpecification,
+  ComprehensivePeriodReview,
+  calculateComprehensivePeriodReview,
   calculateDailyProgressSummary,
   calculateWeeklyReviewSummary,
   calculateDetailedRoadmapProgress,
@@ -32,6 +35,9 @@ import {
   reconstructProjectHistory,
   generateProgressReviewReport,
   getWeekIdentifier,
+  getThisWeekPeriod,
+  getPreviousWeekPeriod,
+  getWeekPeriod,
   getLastNDaysPeriod,
   isValidDateString,
   isValidWeekIdentifier,
@@ -300,4 +306,84 @@ export class ProgressService {
       handleRepositoryError(err, 'Failed to generate progress review report.');
     }
   }
+
+  /**
+   * Derives a Comprehensive Period Review for Phase 11A.
+   * Supports 'this-week', 'last-week', and arbitrary 'custom' date ranges.
+   */
+  async getPeriodProgressReview(options: {
+    readonly periodType: 'this-week' | 'last-week' | 'custom';
+    readonly customStartDate?: string;
+    readonly customEndDate?: string;
+    readonly referenceDate?: Date | string;
+  }): Promise<ComprehensivePeriodReview> {
+    const ref = options.referenceDate !== undefined ? new Date(options.referenceDate) : new Date();
+
+    let period: PeriodSpecification;
+
+    if (options.periodType === 'this-week') {
+      const weekId = getWeekIdentifier(ref);
+      const weekRange = getWeekPeriod(weekId);
+      period = {
+        type: 'this-week',
+        startDate: weekRange.startDate,
+        endDate: weekRange.endDate,
+        weekIdentifier: weekId,
+        label: `This Week (${weekId})`,
+      };
+    } else if (options.periodType === 'last-week') {
+      const prevWeekDate = new Date(ref.getTime() - 7 * 24 * 3600 * 1000);
+      const prevWeekId = getWeekIdentifier(prevWeekDate);
+      const prevWeekRange = getWeekPeriod(prevWeekId);
+      period = {
+        type: 'last-week',
+        startDate: prevWeekRange.startDate,
+        endDate: prevWeekRange.endDate,
+        weekIdentifier: prevWeekId,
+        label: `Last Week (${prevWeekId})`,
+      };
+    } else {
+      // Custom range
+      const startDate = options.customStartDate?.trim() ?? getLastNDaysPeriod(7, ref).startDate;
+      const endDate = options.customEndDate?.trim() ?? getLastNDaysPeriod(7, ref).endDate;
+
+      if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+        throw new ValidationError(['Start date and end date must be valid YYYY-MM-DD calendar dates.']);
+      }
+      if (startDate > endDate) {
+        throw new ValidationError([
+          `Start date "${startDate}" cannot follow end date "${endDate}".`,
+        ]);
+      }
+
+      period = {
+        type: 'custom',
+        startDate,
+        endDate,
+        label: `Custom Range (${startDate} – ${endDate})`,
+      };
+    }
+
+    try {
+      const [sessions, tasks, roadmaps, goals, weeklyPlans] = await Promise.all([
+        this.sessionRepo.getAll(),
+        this.taskRepo.getAll(),
+        this.roadmapRepo.getAll(),
+        this.goalRepo.getAll(),
+        this.weeklyPlanRepo.getAll(),
+      ]);
+
+      return calculateComprehensivePeriodReview({
+        period,
+        sessions,
+        tasks,
+        roadmaps,
+        goals,
+        weeklyPlans,
+      });
+    } catch (err) {
+      handleRepositoryError(err, 'Failed to derive comprehensive period progress review.');
+    }
+  }
 }
+
