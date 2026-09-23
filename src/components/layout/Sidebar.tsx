@@ -107,12 +107,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                     className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                       isActive
                         ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
-                        : route.id === 'goals' || route.id === 'roadmaps' || route.id === 'tasks' || route.id === 'sessions'
+                        : route.id === 'goals' || route.id === 'roadmaps' || route.id === 'tasks' || route.id === 'sessions' || route.id === 'weekly-plans'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold'
                         : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
                     }`}
                   >
-                    {route.id === 'goals' || route.id === 'roadmaps' || route.id === 'tasks' || route.id === 'sessions' ? 'Active' : 'P2+'}
+                    {route.id === 'goals' || route.id === 'roadmaps' || route.id === 'tasks' || route.id === 'sessions' || route.id === 'weekly-plans' ? 'Active' : 'P2+'}
                   </span>
                 </button>
               );

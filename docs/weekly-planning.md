@@ -139,3 +139,28 @@ PathFlow supports diverse domains without schema fragmentation:
 * **Game Systems Lab**: e.g., Goal: *"Game Systems Lab Engineering"*, Task: *"Spatial Grid Query Optimization"*, planned for 120 minutes on Tuesday.
 
 Both goals, roadmaps, and tasks coexist seamlessly within the same `WeeklyPlan`. Domain calculation services (`calculateGoalPlannedMinutesInPlan`, `calculateRoadmapPlannedMinutesInPlan`) allow isolated tracking per goal or roadmap while maintaining a single, unified weekly schedule.
+
+---
+
+## 8. Phase 10A — Weekly Planning UI Foundation
+
+The Phase 10A UI foundation surfaces the Weekly Planning system in PathFlow's presentation layer:
+
+### Routing & Navigation
+* **Route**: `#weekly-plans` (supports deep links to specific weeks via `#weekly-plans/:weekIdentifier`).
+* **ISO Week Navigation**: Deterministic Previous (`getPreviousWeekIdentifier`), Current / This Week (`getCurrentWeekIdentifier`), and Next (`getNextWeekIdentifier`) controls.
+* **Current Week Indicator**: Live visual badge when the user is viewing the actual current calendar week.
+* **Presentation Independence**: Displays the date range honoring the active Language (`en` or `fa`) and Calendar system (`gregorian` or `persian`) while preserving standard ISO `YYYY-Www` storage identity.
+
+### Compact Weekly Overview
+* **Total Planned Time**: Localized total planned hours and minutes derived directly from aggregate commitments.
+* **Planned Commitments**: Item count badges and unallocated vs. scheduled breakdown.
+* **Completion Indicator**: Real-time ratio and percentage of planned commitments completed.
+
+### Item Management & Modal
+* **Roadmap-Grouped Task Selector**: Tasks are grouped hierarchically by parent roadmap with status annotations.
+* **Strict Date Selection**: Dropdown provides either Flexible Weekly Commitment or one of the 7 valid ISO week calendar days (Monday–Sunday) formatted in user calendar preferences.
+* **Planned Duration Controls**: Minute inputs with quick-select pills (+15m, +30m, +45m, +60m, +90m, +120m).
+* **Actions**: Inline completion toggle, editing planned minutes/target dates, and safe deletion confirmation.
+* **Resilience**: Graceful fallbacks for missing/deleted tasks, offline persistence, and domain validation error surfacing.
+
