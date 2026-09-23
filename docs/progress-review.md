@@ -153,3 +153,52 @@ export interface ProgressReviewReport {
 ```
 
 This ensures future UI components in Phase 7 and beyond consume pure, validated domain data without needing knowledge of IndexedDB schemas, Dexie queries, or complex data aggregation logic.
+
+---
+
+## 8. Progress Visualizations & Trends (Phase 11B)
+
+The UI visualization layer renders deterministic, accessible charts directly derived from `ComprehensivePeriodReview` without adding heavy external dependencies or duplicating domain logic.
+
+### Available Visualizations
+
+1. **Daily Planned vs. Actual Chart (`PlannedVsActualDailyChart`)**
+   - **Data Source**: `reviewData.dailyBreakdown` (derived via `preparePlannedVsActualDailyData`).
+   - **Visual Format**: Paired vertical bars for each day comparing planned duration vs. logged session duration.
+   - **Key Features**: Side-by-side comparison, exact numeric minute tooltips, difference variance display (`+/-`), and an accessible toggleable data table.
+   - **Neutrality**: Purely comparative; no judgments or failure indicators.
+
+2. **Actual Time Trend (`ActualTimeTrendChart`)**
+   - **Data Source**: `reviewData.dailyBreakdown` (derived via `prepareActualTimeTrendData`).
+   - **Visual Format**: Clean SVG area and polyline chart displaying daily session duration progression across the active period.
+   - **Key Features**: Interactive focusable/hoverable data points, session count tooltips, dashed reference lines, and an objective daily average badge (`Avg Xh Ym / day`).
+   - **Neutrality**: Labeled strictly "Actual Time"; avoids speculative forecasting or "productivity trend" terminology.
+
+3. **Task Completion Trend (`TaskCompletionTrendChart`)**
+   - **Data Source**: `reviewData.dailyBreakdown` (derived via `prepareTaskCompletionTrendData`).
+   - **Visual Format**: Grouped indicator bars for each calendar day showing tasks worked on alongside tasks completed.
+   - **Key Features**: Differentiates discrete activity from completions, exact counts, localized day labels.
+   - **Neutrality**: Presents factual counts without scoring or ranking days.
+
+4. **Roadmap Time Distribution (`RoadmapTimeDistributionChart`)**
+   - **Data Source**: `reviewData.roadmaps` (derived via `prepareRoadmapDistributionData`).
+   - **Visual Format**: Proportional horizontal bar chart displaying actual session hours allocated per roadmap.
+   - **Key Features**: Exact duration formatting, percentage of total actual time, parent goal context badge, graceful handling of unassigned roadmaps (`General`).
+   - **Neutrality**: Reflects actual time investment without imposing priority rankings.
+
+5. **Goal & Roadmap Progress Bars (`GoalProgressSection`, `RoadmapProgressSection`)**
+   - **Data Source**: Domain-calculated `taskCompletionPercentage`.
+   - **Visual Format**: Compact, high-contrast progress tracks with exact task fractions (`X / Y tasks`) and percentage text.
+   - **Key Features**: Standard ARIA `role="progressbar"` with `aria-valuenow`, `aria-valuemin="0"`, and `aria-valuemax="100"`.
+
+### Review-Period Synchronization
+All visualizations receive props directly from `reviewData` in `ProgressView`. When the period filter changes (This Week, Last Week, or Custom Range), all visualizations refresh atomically with zero state drift or redundant queries.
+
+### Accessibility & Localization
+* **Screen Reader Support**: Standard ARIA attributes (`role="region"`, `role="tooltip"`, `role="progressbar"`, `tabIndex={0}` on interactive points, toggleable data table).
+* **Color Independence**: Color coding is always paired with shape distinctions, labels, and numeric values.
+* **Dual Calendar & Language**: Respects Gregorian and Persian calendars and English/Persian languages, utilizing `useUserPreferences()` for dates, numbers, and day names.
+
+### Empty-State Handling
+When a period has no logged sessions or planned commitments, each visualization displays a clean, compact empty state rather than deceptive zero-axes or misleading empty charts.
+

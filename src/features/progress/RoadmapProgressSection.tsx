@@ -91,7 +91,14 @@ export const RoadmapProgressSection: React.FC<RoadmapProgressSectionProps> = ({ 
 
               {/* Progress Bar */}
               <div className="flex items-center space-x-3 mt-2">
-                <div className="flex-1 bg-neutral-200 dark:bg-neutral-700 h-2 rounded-full overflow-hidden">
+                <div
+                  className="flex-1 bg-neutral-200 dark:bg-neutral-700 h-2 rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={roadmap.taskCompletionPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${roadmap.title}: ${formatNumeral(roadmap.taskCompletionPercentage)}%`}
+                >
                   <div
                     className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, roadmap.taskCompletionPercentage)}%` }}

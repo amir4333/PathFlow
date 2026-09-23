@@ -14,6 +14,10 @@ import { useUserPreferences, getTranslation } from '../../app/preferences';
 import { ComprehensivePeriodReview } from '../../domain';
 import { ProgressSummaryCards } from './ProgressSummaryCards';
 import { PlannedVsActualBar } from './PlannedVsActualBar';
+import { PlannedVsActualDailyChart } from './PlannedVsActualDailyChart';
+import { ActualTimeTrendChart } from './ActualTimeTrendChart';
+import { TaskCompletionTrendChart } from './TaskCompletionTrendChart';
+import { RoadmapTimeDistributionChart } from './RoadmapTimeDistributionChart';
 import { GoalProgressSection } from './GoalProgressSection';
 import { RoadmapProgressSection } from './RoadmapProgressSection';
 import { TaskActivitySection } from './TaskActivitySection';
@@ -257,6 +261,18 @@ export const ProgressView: React.FC = () => {
             plannedMinutes={reviewData.summary.totalPlannedMinutes}
             actualMinutes={reviewData.summary.totalActualMinutes}
           />
+
+          {/* Phase 11B: Daily Planned vs Actual Chart */}
+          <PlannedVsActualDailyChart dailyBreakdown={reviewData.dailyBreakdown} />
+
+          {/* Phase 11B: Actual Time & Task Completion Trends (2-column on desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ActualTimeTrendChart dailyBreakdown={reviewData.dailyBreakdown} />
+            <TaskCompletionTrendChart dailyBreakdown={reviewData.dailyBreakdown} />
+          </div>
+
+          {/* Phase 11B: Roadmap Time Distribution */}
+          <RoadmapTimeDistributionChart roadmaps={reviewData.roadmaps} />
 
           {/* Section 8: Daily Review */}
           <DailyReviewSection dailyBreakdown={reviewData.dailyBreakdown} />
