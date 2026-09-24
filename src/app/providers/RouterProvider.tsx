@@ -27,7 +27,10 @@ export function parseHashToState(hash: string): RouteState {
   // roadmaps/:id
   // or query/hash strings
   const parts = cleanHash.split('/');
-  const baseSegment = parts[0] as AppRouteId;
+  let baseSegment = parts[0] as AppRouteId;
+  if (baseSegment === 'teacher') {
+    baseSegment = 'teacher-view';
+  }
   const validRoute = APP_ROUTES.find((r) => r.id === baseSegment);
 
   if (!validRoute) {
@@ -35,7 +38,19 @@ export function parseHashToState(hash: string): RouteState {
   }
 
   const params: Record<string, string> = {};
-  if (parts.length > 1 && parts[1]) {
+  if (baseSegment === 'teacher-view') {
+    if (parts[1] === 'goal' && parts[2]) {
+      params.subview = 'goal';
+      params.goalId = parts[2];
+      params.id = parts[2];
+    } else if (parts[1] === 'roadmap' && parts[2]) {
+      params.subview = 'roadmap';
+      params.roadmapId = parts[2];
+      params.id = parts[2];
+    } else if (parts[1]) {
+      params.id = parts[1];
+    }
+  } else if (parts.length > 1 && parts[1]) {
     params.id = parts[1];
   }
 

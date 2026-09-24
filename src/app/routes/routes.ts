@@ -12,6 +12,7 @@ export type AppRouteId =
   | 'weekly-plans'
   | 'progress'
   | 'teacher'
+  | 'teacher-view'
   | 'settings';
 
 export interface RouteDefinition {
@@ -73,10 +74,10 @@ export const APP_ROUTES: RouteDefinition[] = [
     category: 'workflow',
   },
   {
-    id: 'teacher',
+    id: 'teacher-view',
     label: 'Teacher View',
     description: 'Controlled read-only progress sharing and mentor review portal.',
-    plannedPhase: 'Phase 4 (Collaboration & Sync Protocol)',
+    plannedPhase: 'Phase 12A (Teacher View Foundation)',
     category: 'collaboration',
   },
   {

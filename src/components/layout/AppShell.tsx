@@ -32,6 +32,7 @@ export const AppShell: React.FC = () => {
         return <WeeklyPlansView />;
       case 'progress':
         return <ProgressView />;
+      case 'teacher-view':
       case 'teacher':
         return <TeacherView />;
       case 'settings':

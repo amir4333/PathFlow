@@ -30,6 +30,7 @@ const ROUTE_ICONS: Record<AppRouteId, React.ComponentType<{ className?: string }
   'weekly-plans': Calendar,
   progress: TrendingUp,
   teacher: GraduationCap,
+  'teacher-view': GraduationCap,
   settings: Settings,
 };
 
@@ -146,10 +147,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                   className={`text-[10px] px-1.5 py-0.5 rounded ${
                     isActive
                       ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
+                      : route.id === 'teacher-view' || route.id === 'teacher'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
                   }`}
                 >
-                  P4
+                  {route.id === 'teacher-view' || route.id === 'teacher' ? 'Read-Only' : 'P4'}
                 </span>
               </button>
             );
