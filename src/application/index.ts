@@ -14,3 +14,4 @@ export * from './tasks';
 export * from './sessions';
 export * from './weekly-plans';
 export * from './progress';
+export * from './reports';

@@ -13,6 +13,7 @@ import { TaskService } from './tasks/taskService';
 import { SessionService } from './sessions/sessionService';
 import { WeeklyPlanningService } from './weekly-plans/weeklyPlanningService';
 import { ProgressService } from './progress/progressService';
+import { ReportService } from './reports/reportService';
 
 export interface ApplicationServices {
   readonly goals: GoalService;
@@ -21,6 +22,7 @@ export interface ApplicationServices {
   readonly sessions: SessionService;
   readonly weeklyPlans: WeeklyPlanningService;
   readonly progress: ProgressService;
+  readonly reports: ReportService;
 }
 
 /**
@@ -58,6 +60,14 @@ export function createApplicationServices(
     repositories.sessions,
     repositories.weeklyPlans
   );
+  const reportService = new ReportService(
+    repositories.goals,
+    repositories.roadmaps,
+    repositories.tasks,
+    repositories.sessions,
+    repositories.weeklyPlans,
+    progressService
+  );
 
   return {
     goals: goalService,
@@ -66,5 +76,6 @@ export function createApplicationServices(
     sessions: sessionService,
     weeklyPlans: weeklyPlanningService,
     progress: progressService,
+    reports: reportService,
   };
 }

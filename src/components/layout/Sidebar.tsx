@@ -11,6 +11,7 @@ import {
   Calendar,
   TrendingUp,
   GraduationCap,
+  FileText,
   ShieldAlert,
   Compass,
   Settings,
@@ -31,6 +32,7 @@ const ROUTE_ICONS: Record<AppRouteId, React.ComponentType<{ className?: string }
   progress: TrendingUp,
   teacher: GraduationCap,
   'teacher-view': GraduationCap,
+  reports: FileText,
   settings: Settings,
 };
 
@@ -149,10 +151,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
                       ? 'bg-white/20 text-white dark:bg-neutral-900/20 dark:text-neutral-900'
                       : route.id === 'teacher-view' || route.id === 'teacher'
                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold'
+                      : route.id === 'reports'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 font-semibold'
                       : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'
                   }`}
                 >
-                  {route.id === 'teacher-view' || route.id === 'teacher' ? 'Read-Only' : 'P4'}
+                  {route.id === 'teacher-view' || route.id === 'teacher' ? 'Read-Only' : route.id === 'reports' ? 'Official' : 'P4'}
                 </span>
               </button>
             );
@@ -207,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
       {/* Desktop Persistent Sidebar */}
       <aside
         id="app-sidebar-desktop"
-        className="hidden md:block w-64 h-screen shrink-0 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 sticky top-0"
+        className="hidden md:block w-64 h-screen shrink-0 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 sticky top-0 print:hidden"
       >
         {navContent}
       </aside>
@@ -217,14 +221,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpenMobile, onCloseMobile })
         <div
           id="sidebar-mobile-backdrop"
           onClick={onCloseMobile}
-          className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs z-40 md:hidden"
+          className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs z-40 md:hidden print:hidden"
         />
       )}
 
       {/* Mobile Drawer */}
       <div
         id="app-sidebar-mobile"
-        className={`fixed inset-y-0 left-0 w-64 bg-white dark:bg-neutral-900 z-50 transform transition-transform duration-200 ease-in-out md:hidden border-r border-neutral-200 dark:border-neutral-800 ${
+        className={`fixed inset-y-0 left-0 w-64 bg-white dark:bg-neutral-900 z-50 transform transition-transform duration-200 ease-in-out md:hidden border-r border-neutral-200 dark:border-neutral-800 print:hidden ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

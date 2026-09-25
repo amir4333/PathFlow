@@ -45,7 +45,7 @@ import { calculateDatePlannedMinutes } from './weeklyPlanning';
 // Helper Invariants & Utility Guards
 // =============================================================================
 
-function isValidSession(s: Session): boolean {
+export function isValidSession(s: Session): boolean {
   return (
     typeof s.durationMinutes === 'number' &&
     !isNaN(s.durationMinutes) &&

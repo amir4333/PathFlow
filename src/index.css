@@ -1,1 +1,143 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   Phase 13B: Official Report Print & PDF Export Stylesheet
+   ========================================================================== */
+
+@layer utilities {
+  .print-only {
+    display: none;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  html,
+  body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #171717 !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #pathflow-app-root {
+    background: #ffffff !important;
+    color: #171717 !important;
+    min-height: auto !important;
+    display: block !important;
+  }
+
+  /* Visibility Toggles */
+  .print-only {
+    display: block !important;
+  }
+
+  .screen-only,
+  .print\:hidden,
+  #app-sidebar-desktop,
+  #app-sidebar-mobile,
+  #sidebar-mobile-backdrop,
+  #app-header,
+  button,
+  select,
+  input {
+    display: none !important;
+  }
+
+  /* Reset layout constraints for print */
+  #main-content-area {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+
+  #reports-view-root {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #official-report-document {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Section & Card Page-Break Control */
+  section,
+  table,
+  article > section,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  /* Table readability in print */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8.5pt !important;
+  }
+
+  th,
+  td {
+    border-color: #e5e5e5 !important;
+    color: #171717 !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  /* Typography & contrast preservation */
+  h1, h2, h3, h4 {
+    color: #000000 !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  p, span, div {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* RTL / LTR preservation */
+  [dir="rtl"] {
+    direction: rtl !important;
+    text-align: right !important;
+  }
+
+  [dir="ltr"] {
+    direction: ltr !important;
+    text-align: left !important;
+  }
+}

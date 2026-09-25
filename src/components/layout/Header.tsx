@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   return (
     <header
       id="app-header"
-      className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30"
+      className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 print:hidden"
     >
       <div className="flex items-center gap-3">
         <button

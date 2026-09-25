@@ -63,9 +63,9 @@ The system is partitioned into five distinct architectural layers:
 * **Status**: **Implemented (Phase 3 & Phase 4)**. Local Dexie-backed database (`PathFlowDB`), repository interfaces, active session singleton tracking, and full CRUD/temporal query implementations for Goal, Roadmap, Task, Session, WeeklyPlan, and WeeklyPlanItem are active. See `docs/persistence.md` and `docs/session-time-tracking.md` for details.
 
 ### 5. Sync Layer (`src/sync/`)
-* **Role**: Handles durable mutation queuing, background incremental delta synchronization, and conflict resolution (e.g., Last-Write-Wins / Lamport timestamps) across multiple devices.
+* **Role**: Handles durable mutation queuing, background incremental delta synchronization, and conflict resolution across multiple devices.
 * **Rule**: Synchronization is strictly isolated as an auxiliary concern; the application is fully functional offline even if synchronization is disabled or unavailable.
-* **Status**: **Conceptual Structure / Placeholder for Future Phase**.
+* **Status**: **Implemented (Phase 14A Architecture & Contracts)**. Durable Outbox mutation queue (`SyncOutbox`), deterministic conflict resolution (`ConflictResolver`), sync engine lifecycle (`SyncEngine`), remote client abstraction (`RemoteSyncClient`), and student-issued read-only teacher access grants (`TeacherAccessManager`, `TeacherRemoteAdapter`). See `docs/sync-and-teacher-access-architecture.md` for full specification.
 
 ---
 

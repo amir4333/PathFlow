@@ -13,6 +13,7 @@ export type AppRouteId =
   | 'progress'
   | 'teacher'
   | 'teacher-view'
+  | 'reports'
   | 'settings';
 
 export interface RouteDefinition {
@@ -78,6 +79,13 @@ export const APP_ROUTES: RouteDefinition[] = [
     label: 'Teacher View',
     description: 'Controlled read-only progress sharing and mentor review portal.',
     plannedPhase: 'Phase 12A (Teacher View Foundation)',
+    category: 'collaboration',
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    description: 'Official, structured progress reports for academic and mentor review.',
+    plannedPhase: 'Phase 13A (Official Progress Report Foundation)',
     category: 'collaboration',
   },
   {
