@@ -118,11 +118,20 @@ export interface SyncPullResponse {
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
+export type SyncConnectionState =
+  | 'connected'
+  | 'connecting'
+  | 'offline'
+  | 'auth_required'
+  | 'server_unavailable'
+  | 'error';
+
 /**
  * Current health and lifecycle status of the synchronization engine.
  */
 export interface SyncStatus {
   readonly state: SyncState;
+  readonly connectionState?: SyncConnectionState;
   readonly isOnline: boolean;
   readonly pendingCount: number;
   readonly lastSyncedAt?: Timestamp;

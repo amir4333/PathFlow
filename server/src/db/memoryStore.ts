@@ -152,16 +152,23 @@ export class MemoryDatabaseStore implements DatabaseStore {
     });
   }
 
-  // --- Entity Operations ---
+  // --- Entity Operations (With Strict Student Ownership Enforcement) ---
 
   async upsertGoal(goal: BackendGoal): Promise<BackendGoal> {
+    const existing = this.goals.get(goal.id);
+    if (existing && existing.studentId !== goal.studentId) {
+      throw new Error(`Unauthorized cross-student access: Goal ${goal.id} belongs to another student`);
+    }
     this.goals.set(goal.id, goal);
     return goal;
   }
 
   async deleteGoal(studentId: string, id: string): Promise<void> {
     const goal = this.goals.get(id);
-    if (goal && goal.studentId === studentId) {
+    if (goal) {
+      if (goal.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: Goal ${id} belongs to another student`);
+      }
       this.goals.delete(id);
     }
   }
@@ -171,13 +178,24 @@ export class MemoryDatabaseStore implements DatabaseStore {
   }
 
   async upsertRoadmap(roadmap: BackendRoadmap): Promise<BackendRoadmap> {
+    const existing = this.roadmaps.get(roadmap.id);
+    if (existing && existing.studentId !== roadmap.studentId) {
+      throw new Error(`Unauthorized cross-student access: Roadmap ${roadmap.id} belongs to another student`);
+    }
+    const parentGoal = this.goals.get(roadmap.goalId);
+    if (parentGoal && parentGoal.studentId !== roadmap.studentId) {
+      throw new Error(`Unauthorized cross-student reference: Goal ${roadmap.goalId} belongs to another student`);
+    }
     this.roadmaps.set(roadmap.id, roadmap);
     return roadmap;
   }
 
   async deleteRoadmap(studentId: string, id: string): Promise<void> {
     const roadmap = this.roadmaps.get(id);
-    if (roadmap && roadmap.studentId === studentId) {
+    if (roadmap) {
+      if (roadmap.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: Roadmap ${id} belongs to another student`);
+      }
       this.roadmaps.delete(id);
     }
   }
@@ -187,13 +205,24 @@ export class MemoryDatabaseStore implements DatabaseStore {
   }
 
   async upsertTask(task: BackendTask): Promise<BackendTask> {
+    const existing = this.tasks.get(task.id);
+    if (existing && existing.studentId !== task.studentId) {
+      throw new Error(`Unauthorized cross-student access: Task ${task.id} belongs to another student`);
+    }
+    const parentRoadmap = this.roadmaps.get(task.roadmapId);
+    if (parentRoadmap && parentRoadmap.studentId !== task.studentId) {
+      throw new Error(`Unauthorized cross-student reference: Roadmap ${task.roadmapId} belongs to another student`);
+    }
     this.tasks.set(task.id, task);
     return task;
   }
 
   async deleteTask(studentId: string, id: string): Promise<void> {
     const task = this.tasks.get(id);
-    if (task && task.studentId === studentId) {
+    if (task) {
+      if (task.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: Task ${id} belongs to another student`);
+      }
       this.tasks.delete(id);
     }
   }
@@ -203,13 +232,24 @@ export class MemoryDatabaseStore implements DatabaseStore {
   }
 
   async upsertSession(session: BackendSession): Promise<BackendSession> {
+    const existing = this.sessions.get(session.id);
+    if (existing && existing.studentId !== session.studentId) {
+      throw new Error(`Unauthorized cross-student access: Session ${session.id} belongs to another student`);
+    }
+    const parentTask = this.tasks.get(session.taskId);
+    if (parentTask && parentTask.studentId !== session.studentId) {
+      throw new Error(`Unauthorized cross-student reference: Task ${session.taskId} belongs to another student`);
+    }
     this.sessions.set(session.id, session);
     return session;
   }
 
   async deleteSession(studentId: string, id: string): Promise<void> {
     const session = this.sessions.get(id);
-    if (session && session.studentId === studentId) {
+    if (session) {
+      if (session.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: Session ${id} belongs to another student`);
+      }
       this.sessions.delete(id);
     }
   }
@@ -219,13 +259,20 @@ export class MemoryDatabaseStore implements DatabaseStore {
   }
 
   async upsertWeeklyPlan(plan: BackendWeeklyPlan): Promise<BackendWeeklyPlan> {
+    const existing = this.weeklyPlans.get(plan.id);
+    if (existing && existing.studentId !== plan.studentId) {
+      throw new Error(`Unauthorized cross-student access: WeeklyPlan ${plan.id} belongs to another student`);
+    }
     this.weeklyPlans.set(plan.id, plan);
     return plan;
   }
 
   async deleteWeeklyPlan(studentId: string, id: string): Promise<void> {
     const plan = this.weeklyPlans.get(id);
-    if (plan && plan.studentId === studentId) {
+    if (plan) {
+      if (plan.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: WeeklyPlan ${id} belongs to another student`);
+      }
       this.weeklyPlans.delete(id);
     }
   }
@@ -235,13 +282,20 @@ export class MemoryDatabaseStore implements DatabaseStore {
   }
 
   async upsertWeeklyPlanItem(item: BackendWeeklyPlanItem): Promise<BackendWeeklyPlanItem> {
+    const existing = this.weeklyPlanItems.get(item.id);
+    if (existing && existing.studentId !== item.studentId) {
+      throw new Error(`Unauthorized cross-student access: WeeklyPlanItem ${item.id} belongs to another student`);
+    }
     this.weeklyPlanItems.set(item.id, item);
     return item;
   }
 
   async deleteWeeklyPlanItem(studentId: string, id: string): Promise<void> {
     const item = this.weeklyPlanItems.get(id);
-    if (item && item.studentId === studentId) {
+    if (item) {
+      if (item.studentId !== studentId) {
+        throw new Error(`Unauthorized cross-student deletion: WeeklyPlanItem ${id} belongs to another student`);
+      }
       this.weeklyPlanItems.delete(id);
     }
   }
@@ -257,6 +311,8 @@ export class MemoryDatabaseStore implements DatabaseStore {
   ): Promise<BackendTeacherAccessGrant> {
     const grant: BackendTeacherAccessGrant = {
       id: genId('grnt'),
+      scopeType: grantData.scopeType ?? 'all',
+      scopeId: grantData.scopeId ?? null,
       ...grantData,
     };
     this.grants.set(grant.id, grant);

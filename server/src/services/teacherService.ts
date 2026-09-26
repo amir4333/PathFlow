@@ -2,10 +2,15 @@
  * Backend Teacher Service
  *
  * Enforces student-controlled grants and read-only data access for teachers/mentors.
- * Completely prohibits write operations on student records.
+ * Completely prohibits write operations on student records and enforces granular
+ * grant scope boundaries (all, goal, roadmap).
  */
 
-import { DatabaseStore, BackendTeacherAccessGrant } from '../db/types';
+import {
+  DatabaseStore,
+  BackendTeacherAccessGrant,
+  BackendTeacherGrantScopeType,
+} from '../db/types';
 
 export class TeacherAccessError extends Error {
   constructor(message: string, public readonly statusCode = 403) {
@@ -24,6 +29,8 @@ export class TeacherService {
     options: {
       label: string;
       permissions?: string[];
+      scopeType?: BackendTeacherGrantScopeType;
+      scopeId?: string | null;
       ttlDays?: number;
     }
   ): Promise<BackendTeacherAccessGrant> {
@@ -36,18 +43,41 @@ export class TeacherService {
       expiresAt = expDate.toISOString();
     }
 
+    const scopeType = options.scopeType ?? 'all';
+    const scopeId = options.scopeId?.trim() || null;
+
+    // Validate scope targets
+    if (scopeType === 'goal') {
+      if (!scopeId) {
+        throw new TeacherAccessError('scopeId is required when scopeType is "goal"', 400);
+      }
+      const goals = await this.store.getGoals(studentId);
+      if (!goals.some((g) => g.id === scopeId)) {
+        throw new TeacherAccessError('Scoped goal not found or not owned by student', 404);
+      }
+    } else if (scopeType === 'roadmap') {
+      if (!scopeId) {
+        throw new TeacherAccessError('scopeId is required when scopeType is "roadmap"', 400);
+      }
+      const roadmaps = await this.store.getRoadmaps(studentId);
+      if (!roadmaps.some((r) => r.id === scopeId)) {
+        throw new TeacherAccessError('Scoped roadmap not found or not owned by student', 404);
+      }
+    }
+
     const token = `pt_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
 
-    const permissions = options.permissions && options.permissions.length > 0
-      ? options.permissions
-      : [
-          'read:goals',
-          'read:roadmaps',
-          'read:tasks',
-          'read:sessions',
-          'read:weekly_plans',
-          'read:reports',
-        ];
+    const permissions =
+      options.permissions && options.permissions.length > 0
+        ? options.permissions
+        : [
+            'read:goals',
+            'read:roadmaps',
+            'read:tasks',
+            'read:sessions',
+            'read:weekly_plans',
+            'read:reports',
+          ];
 
     return this.store.createTeacherGrant({
       studentId,
@@ -55,6 +85,8 @@ export class TeacherService {
       token,
       role: 'read_only',
       permissions,
+      scopeType,
+      scopeId,
       createdAt: now.toISOString(),
       expiresAt,
       isActive: true,
@@ -114,26 +146,76 @@ export class TeacherService {
     return grant;
   }
 
-  // --- Read-Only Query Methods ---
+  // --- Read-Only Query Methods (With Granular Grant Scoping) ---
 
   async getStudentGoals(token: string, studentId: string) {
-    await this.verifyAccess(token, studentId, 'read:goals');
-    return this.store.getGoals(studentId);
+    const grant = await this.verifyAccess(token, studentId, 'read:goals');
+    const goals = await this.store.getGoals(studentId);
+
+    if (grant.scopeType === 'goal' && grant.scopeId) {
+      return goals.filter((g) => g.id === grant.scopeId);
+    }
+    if (grant.scopeType === 'roadmap' && grant.scopeId) {
+      const roadmaps = await this.store.getRoadmaps(studentId);
+      const targetRoadmap = roadmaps.find((r) => r.id === grant.scopeId);
+      if (!targetRoadmap) return [];
+      return goals.filter((g) => g.id === targetRoadmap.goalId);
+    }
+    return goals;
   }
 
   async getStudentRoadmaps(token: string, studentId: string) {
-    await this.verifyAccess(token, studentId, 'read:roadmaps');
-    return this.store.getRoadmaps(studentId);
+    const grant = await this.verifyAccess(token, studentId, 'read:roadmaps');
+    const roadmaps = await this.store.getRoadmaps(studentId);
+
+    if (grant.scopeType === 'goal' && grant.scopeId) {
+      return roadmaps.filter((r) => r.goalId === grant.scopeId);
+    }
+    if (grant.scopeType === 'roadmap' && grant.scopeId) {
+      return roadmaps.filter((r) => r.id === grant.scopeId);
+    }
+    return roadmaps;
   }
 
   async getStudentTasks(token: string, studentId: string) {
-    await this.verifyAccess(token, studentId, 'read:tasks');
-    return this.store.getTasks(studentId);
+    const grant = await this.verifyAccess(token, studentId, 'read:tasks');
+    const tasks = await this.store.getTasks(studentId);
+
+    if (grant.scopeType === 'goal' && grant.scopeId) {
+      const roadmaps = await this.store.getRoadmaps(studentId);
+      const allowedRoadmapIds = new Set(
+        roadmaps.filter((r) => r.goalId === grant.scopeId).map((r) => r.id)
+      );
+      return tasks.filter((t) => allowedRoadmapIds.has(t.roadmapId));
+    }
+    if (grant.scopeType === 'roadmap' && grant.scopeId) {
+      return tasks.filter((t) => t.roadmapId === grant.scopeId);
+    }
+    return tasks;
   }
 
   async getStudentSessions(token: string, studentId: string, startDate?: string, endDate?: string) {
-    await this.verifyAccess(token, studentId, 'read:sessions');
-    const sessions = await this.store.getSessions(studentId);
+    const grant = await this.verifyAccess(token, studentId, 'read:sessions');
+    let sessions = await this.store.getSessions(studentId);
+
+    if (grant.scopeType === 'goal' && grant.scopeId) {
+      const roadmaps = await this.store.getRoadmaps(studentId);
+      const allowedRoadmapIds = new Set(
+        roadmaps.filter((r) => r.goalId === grant.scopeId).map((r) => r.id)
+      );
+      const tasks = await this.store.getTasks(studentId);
+      const allowedTaskIds = new Set(
+        tasks.filter((t) => allowedRoadmapIds.has(t.roadmapId)).map((t) => t.id)
+      );
+      sessions = sessions.filter((s) => allowedTaskIds.has(s.taskId));
+    } else if (grant.scopeType === 'roadmap' && grant.scopeId) {
+      const tasks = await this.store.getTasks(studentId);
+      const allowedTaskIds = new Set(
+        tasks.filter((t) => t.roadmapId === grant.scopeId).map((t) => t.id)
+      );
+      sessions = sessions.filter((s) => allowedTaskIds.has(s.taskId));
+    }
+
     return sessions.filter((s) => {
       if (startDate && s.startedAt < startDate) return false;
       if (endDate && s.startedAt > endDate) return false;
@@ -142,31 +224,54 @@ export class TeacherService {
   }
 
   async getStudentWeeklyPlans(token: string, studentId: string) {
-    await this.verifyAccess(token, studentId, 'read:weekly_plans');
+    const grant = await this.verifyAccess(token, studentId, 'read:weekly_plans');
     const [plans, items] = await Promise.all([
       this.store.getWeeklyPlans(studentId),
       this.store.getWeeklyPlanItems(studentId),
     ]);
 
-    return plans.map((plan) => ({
-      ...plan,
-      items: items.filter((i) => i.weeklyPlanId === plan.id),
-    }));
+    let allowedTaskIds: Set<string> | null = null;
+    if (grant.scopeType === 'goal' && grant.scopeId) {
+      const roadmaps = await this.store.getRoadmaps(studentId);
+      const allowedRoadmapIds = new Set(
+        roadmaps.filter((r) => r.goalId === grant.scopeId).map((r) => r.id)
+      );
+      const tasks = await this.store.getTasks(studentId);
+      allowedTaskIds = new Set(
+        tasks.filter((t) => allowedRoadmapIds.has(t.roadmapId)).map((t) => t.id)
+      );
+    } else if (grant.scopeType === 'roadmap' && grant.scopeId) {
+      const tasks = await this.store.getTasks(studentId);
+      allowedTaskIds = new Set(
+        tasks.filter((t) => t.roadmapId === grant.scopeId).map((t) => t.id)
+      );
+    }
+
+    return plans.map((plan) => {
+      const planItems = items.filter(
+        (i) => i.weeklyPlanId === plan.id && (!allowedTaskIds || allowedTaskIds.has(i.taskId))
+      );
+      return {
+        ...plan,
+        items: planItems,
+      };
+    });
   }
 
   async getStudentProgress(token: string, studentId: string) {
     // Requires goals or reports permission
+    let grant: BackendTeacherAccessGrant;
     try {
-      await this.verifyAccess(token, studentId, 'read:goals');
+      grant = await this.verifyAccess(token, studentId, 'read:goals');
     } catch {
-      await this.verifyAccess(token, studentId, 'read:reports');
+      grant = await this.verifyAccess(token, studentId, 'read:reports');
     }
 
     const [goals, roadmaps, tasks, sessions] = await Promise.all([
-      this.store.getGoals(studentId),
-      this.store.getRoadmaps(studentId),
-      this.store.getTasks(studentId),
-      this.store.getSessions(studentId),
+      grant.permissions.includes('read:goals') ? this.getStudentGoals(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:roadmaps') ? this.getStudentRoadmaps(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:tasks') ? this.getStudentTasks(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:sessions') ? this.getStudentSessions(token, studentId) : Promise.resolve([]),
     ]);
 
     const totalEstimatedMinutes = tasks.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0);
@@ -175,6 +280,8 @@ export class TeacherService {
 
     return {
       studentId,
+      scopeType: grant.scopeType ?? 'all',
+      scopeId: grant.scopeId ?? null,
       totalGoals: goals.length,
       totalRoadmaps: roadmaps.length,
       totalTasks: tasks.length,
@@ -186,17 +293,19 @@ export class TeacherService {
   }
 
   async getStudentReports(token: string, studentId: string) {
-    await this.verifyAccess(token, studentId, 'read:reports');
+    const grant = await this.verifyAccess(token, studentId, 'read:reports');
     const [goals, roadmaps, tasks, sessions, weeklyPlans] = await Promise.all([
-      this.store.getGoals(studentId),
-      this.store.getRoadmaps(studentId),
-      this.store.getTasks(studentId),
-      this.store.getSessions(studentId),
-      this.store.getWeeklyPlans(studentId),
+      grant.permissions.includes('read:goals') ? this.getStudentGoals(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:roadmaps') ? this.getStudentRoadmaps(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:tasks') ? this.getStudentTasks(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:sessions') ? this.getStudentSessions(token, studentId) : Promise.resolve([]),
+      grant.permissions.includes('read:weekly_plans') ? this.getStudentWeeklyPlans(token, studentId) : Promise.resolve([]),
     ]);
 
     return {
       studentId,
+      scopeType: grant.scopeType ?? 'all',
+      scopeId: grant.scopeId ?? null,
       generatedAt: new Date().toISOString(),
       overview: {
         totalGoals: goals.length,

@@ -11,6 +11,32 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pathflow -d pathflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pathflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pathflow:pathflow_secret@postgres:5432/pathflow_db?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-pathflow-production-secret-min32-characters-required!!}
+      PORT: 3001
+      HOST: 0.0.0.0
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    command: >
+      sh -c "npx prisma migrate deploy --schema=server/prisma/schema.prisma && npx tsx server/src/index.ts"
 
 volumes:
   pgdata:

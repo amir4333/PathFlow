@@ -47,6 +47,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       },
     });
     store = new PrismaDatabaseStore(prisma);
+    app.addHook('onClose', async () => {
+      await prisma.$disconnect();
+    });
   }
 
   const authService = new AuthService(config.authSecret);

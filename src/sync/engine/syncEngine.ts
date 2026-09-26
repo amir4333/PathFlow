@@ -13,6 +13,7 @@ import {
   SyncStatus,
   SyncCursor,
   SyncState,
+  SyncConnectionState,
   SyncEntityChange,
   SyncTombstone,
 } from '../types';
@@ -42,6 +43,9 @@ export class SyncEngine {
   private lastSyncedAt?: string;
   private lastError?: string;
   private listeners: Set<SyncStatusListener> = new Set();
+  private autoSyncIntervalId?: any;
+  private onlineHandler?: () => void;
+  private offlineHandler?: () => void;
 
   constructor(options: SyncEngineOptions) {
     this.deviceId = options.deviceId;
@@ -50,6 +54,7 @@ export class SyncEngine {
     this.remoteClient = options.remoteClient;
     this.conflictResolver = options.conflictResolver ?? new ConflictResolver();
     this.isOnline = options.isOnline ?? true;
+    this.state = this.isOnline ? 'idle' : 'offline';
   }
 
   setOnline(online: boolean): void {
@@ -62,10 +67,44 @@ export class SyncEngine {
     this.notifyStatus();
   }
 
+  private computeConnectionState(): SyncConnectionState {
+    if (!this.isOnline) {
+      return 'offline';
+    }
+    if (this.state === 'syncing') {
+      return 'connecting';
+    }
+    if (this.state === 'error') {
+      const err = (this.lastError || '').toLowerCase();
+      if (
+        err.includes('auth') ||
+        err.includes('401') ||
+        err.includes('unauthorized') ||
+        err.includes('token')
+      ) {
+        return 'auth_required';
+      }
+      if (
+        err.includes('fetch') ||
+        err.includes('network') ||
+        err.includes('timeout') ||
+        err.includes('timed out') ||
+        err.includes('econnrefused') ||
+        err.includes('503') ||
+        err.includes('unavailable')
+      ) {
+        return 'server_unavailable';
+      }
+      return 'error';
+    }
+    return 'connected';
+  }
+
   async getStatus(): Promise<SyncStatus> {
     const pendingCount = await this.outbox.getPendingCount();
     return {
       state: this.state,
+      connectionState: this.computeConnectionState(),
       isOnline: this.isOnline,
       pendingCount,
       lastSyncedAt: this.lastSyncedAt,
@@ -84,13 +123,66 @@ export class SyncEngine {
     this.listeners.forEach((listener) => listener(status));
   }
 
+  startAutoSync(options: { intervalMs?: number } = {}): void {
+    this.stopAutoSync();
+    const intervalMs = options.intervalMs ?? 60000;
+
+    if (typeof window !== 'undefined') {
+      this.onlineHandler = () => {
+        this.setOnline(true);
+        this.syncOnce().catch(() => {});
+      };
+      this.offlineHandler = () => {
+        this.setOnline(false);
+      };
+      window.addEventListener('online', this.onlineHandler);
+      window.addEventListener('offline', this.offlineHandler);
+    }
+
+    this.autoSyncIntervalId = setInterval(() => {
+      if (this.isOnline && this.state !== 'syncing') {
+        this.syncOnce().catch(() => {});
+      }
+    }, intervalMs);
+  }
+
+  stopAutoSync(): void {
+    if (this.autoSyncIntervalId) {
+      clearInterval(this.autoSyncIntervalId);
+      this.autoSyncIntervalId = undefined;
+    }
+    if (typeof window !== 'undefined') {
+      if (this.onlineHandler) {
+        window.removeEventListener('online', this.onlineHandler);
+        this.onlineHandler = undefined;
+      }
+      if (this.offlineHandler) {
+        window.removeEventListener('offline', this.offlineHandler);
+        this.offlineHandler = undefined;
+      }
+    }
+  }
+
+  resetCursor(): void {
+    this.cursor = null;
+    this.lastSyncedAt = undefined;
+    this.lastError = undefined;
+    this.state = this.isOnline ? 'idle' : 'offline';
+    this.notifyStatus();
+  }
+
   /**
    * Executes a single synchronized push and pull iteration.
+   * Prevents concurrent sync runs.
    */
   async syncOnce(): Promise<{ pushedCount: number; pulledCount: number }> {
     if (!this.isOnline) {
       this.state = 'offline';
       await this.notifyStatus();
+      return { pushedCount: 0, pulledCount: 0 };
+    }
+
+    if (this.state === 'syncing') {
       return { pushedCount: 0, pulledCount: 0 };
     }
 

@@ -1,15 +1,25 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { createApplicationServices, ApplicationServices } from '../../application';
 import { createLocalRepositories } from '../../data/repositories/local';
+import { useSync } from '../../sync/context/SyncContext';
 
 const ApplicationContext = createContext<ApplicationServices | undefined>(undefined);
 
 export const ApplicationProvider: React.FC<{
   services?: ApplicationServices;
   children: React.ReactNode;
-}> = ({ services, children }) => {
+}> = ({ services: explicitServices, children }) => {
+  let syncServices: ApplicationServices | undefined;
+  try {
+    const sync = useSync();
+    syncServices = sync.services;
+  } catch {
+    // Isolated tests without SyncProvider
+  }
+
   const applicationServices = useMemo(() => {
-    if (services) return services;
+    if (explicitServices) return explicitServices;
+    if (syncServices) return syncServices;
     const repos = createLocalRepositories();
     return createApplicationServices({
       goals: repos.goals,
@@ -19,7 +29,7 @@ export const ApplicationProvider: React.FC<{
       weeklyPlans: repos.weeklyPlans,
       weeklyPlanItems: repos.weeklyPlanItems,
     });
-  }, [services]);
+  }, [explicitServices, syncServices]);
 
   return (
     <ApplicationContext.Provider value={applicationServices}>

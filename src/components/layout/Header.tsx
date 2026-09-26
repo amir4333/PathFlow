@@ -3,7 +3,9 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { APP_ROUTES } from '../../app/routes/routes';
 import { useActiveSession } from '../../features/sessions/ActiveSessionContext';
 import { useUserPreferences } from '../../app/preferences';
-import { Menu, ShieldCheck, WifiOff, Clock, Settings } from 'lucide-react';
+import { SyncStatusBadge } from '../../features/sync/SyncStatusBadge';
+import { AccountHeaderButton } from '../../features/auth/AccountHeaderButton';
+import { Menu, Settings } from 'lucide-react';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -47,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {/* Live Active Session Ticker */}
         {activeSession && (
           <button
@@ -64,15 +66,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </button>
         )}
 
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Phase 9A Active</span>
-        </div>
+        {/* Sync Status Indicator */}
+        <SyncStatusBadge />
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-          <WifiOff className="w-3.5 h-3.5 text-neutral-500" />
-          <span>Offline-First</span>
-        </div>
+        {/* Account Button / Avatar */}
+        <AccountHeaderButton />
 
         {/* Settings button */}
         <button
@@ -95,3 +93,4 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     </header>
   );
 };
+

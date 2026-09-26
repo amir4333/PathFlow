@@ -97,6 +97,8 @@ export interface BackendTombstone {
   createdAt: Date;
 }
 
+export type BackendTeacherGrantScopeType = 'all' | 'goal' | 'roadmap';
+
 export interface BackendTeacherAccessGrant {
   id: string;
   studentId: string;
@@ -105,6 +107,8 @@ export interface BackendTeacherAccessGrant {
   token: string;
   role: string;
   permissions: string[];
+  scopeType?: BackendTeacherGrantScopeType;
+  scopeId?: string | null;
   createdAt: string;
   expiresAt?: string | null;
   revokedAt?: string | null;

@@ -12,6 +12,8 @@ import { ProgressView } from '../../features/progress/ProgressView';
 import { TeacherView } from '../../features/teacher/TeacherView';
 import { ReportsView } from '../../features/reports/ReportsView';
 import { SettingsView } from '../../features/settings/SettingsView';
+import { AuthModal } from '../../features/auth/AuthModal';
+import { OutboxModal } from '../../features/sync/OutboxModal';
 
 export const AppShell: React.FC = () => {
   const { currentRoute } = useRouter();
@@ -61,6 +63,11 @@ export const AppShell: React.FC = () => {
           {renderActiveView()}
         </main>
       </div>
+
+      {/* Global Sync Modals */}
+      <AuthModal />
+      <OutboxModal />
     </div>
   );
 };
+
