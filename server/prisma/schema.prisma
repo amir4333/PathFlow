@@ -1,0 +1,161 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("student") // "student" | "teacher"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  goals           Goal[]
+  roadmaps        Roadmap[]
+  tasks           Task[]
+  sessions        Session[]
+  weeklyPlans     WeeklyPlan[]
+  weeklyPlanItems WeeklyPlanItem[]
+  mutations       SyncMutationRecord[]
+  tombstones      Tombstone[]
+  studentGrants   TeacherAccessGrant[] @relation("StudentGrants")
+  teacherGrants   TeacherAccessGrant[] @relation("TeacherGrants")
+
+  @@index([email])
+}
+
+model Goal {
+  id          String   @id
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @default("")
+  status      String   @default("not_started")
+  createdAt   String
+  updatedAt   String
+
+  @@index([studentId])
+}
+
+model Roadmap {
+  id        String   @id
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  goalId    String
+  title     String
+  createdAt String
+  updatedAt String
+
+  @@index([studentId, goalId])
+}
+
+model Task {
+  id               String   @id
+  studentId        String
+  student          User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  roadmapId        String
+  title            String
+  description      String   @default("")
+  status           String   @default("todo")
+  priority         String   @default("medium")
+  estimatedMinutes Int      @default(0)
+  createdAt        String
+  updatedAt        String
+  completedAt      String?
+
+  @@index([studentId, roadmapId])
+}
+
+model Session {
+  id              String @id
+  studentId       String
+  student         User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  taskId          String
+  startedAt       String
+  endedAt         String
+  durationMinutes Int
+
+  @@index([studentId, taskId])
+}
+
+model WeeklyPlan {
+  id             String @id
+  studentId      String
+  student        User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weekIdentifier String
+  title          String
+  targetMinutes  Int
+  createdAt      String
+  updatedAt      String
+
+  @@index([studentId, weekIdentifier])
+}
+
+model WeeklyPlanItem {
+  id             String   @id
+  studentId      String
+  student        User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weeklyPlanId   String
+  taskId         String
+  targetDate     String?
+  plannedMinutes Int
+  isCompleted    Boolean  @default(false)
+
+  @@index([studentId, weeklyPlanId])
+}
+
+model SyncMutationRecord {
+  id               String   @id @default(uuid())
+  studentId        String
+  student          User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  deviceId         String
+  clientMutationId String
+  sequence         Int      @default(autoincrement())
+  entityType       String
+  entityId         String
+  operation        String   // "create" | "update" | "delete"
+  payload          String?  // JSON string
+  timestamp        String
+  createdAt        DateTime @default(now())
+
+  @@unique([studentId, deviceId, clientMutationId])
+  @@index([studentId, sequence])
+}
+
+model Tombstone {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  deletedAt  String
+  sequence   Int      @default(autoincrement())
+  createdAt  DateTime @default(now())
+
+  @@unique([studentId, entityType, entityId])
+  @@index([studentId, sequence])
+}
+
+model TeacherAccessGrant {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     User     @relation("StudentGrants", fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId   String?
+  teacher     User?    @relation("TeacherGrants", fields: [teacherId], references: [id], onDelete: SetNull)
+  label       String
+  token       String   @unique
+  role        String   @default("read_only")
+  permissions String   // JSON array of strings
+  createdAt   String
+  expiresAt   String?
+  revokedAt   String?
+  isActive    Boolean  @default(true)
+
+  @@index([studentId])
+  @@index([token])
+}

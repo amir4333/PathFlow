@@ -9,15 +9,21 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts tests/unit/userPreferencesAndCalendar.test.ts tests/unit/sessionHistoryQuery.test.ts tests/unit/sessionHistoryUX.test.ts tests/unit/weeklyPlanningUI.test.ts tests/unit/weeklyPlanningInteraction.test.ts tests/unit/progressViewCore.test.ts tests/unit/progressVisualizations.test.ts tests/unit/teacherView.test.ts tests/unit/reportService.test.ts tests/unit/reportPrintExport.test.ts tests/unit/syncOutbox.test.ts tests/unit/conflictResolution.test.ts tests/unit/syncEngine.test.ts tests/unit/teacherAccess.test.ts"
+    "server": "tsx server/src/index.ts",
+    "db:generate": "prisma generate --schema=server/prisma/schema.prisma",
+    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts tests/unit/userPreferencesAndCalendar.test.ts tests/unit/sessionHistoryQuery.test.ts tests/unit/sessionHistoryUX.test.ts tests/unit/weeklyPlanningUI.test.ts tests/unit/weeklyPlanningInteraction.test.ts tests/unit/progressViewCore.test.ts tests/unit/progressVisualizations.test.ts tests/unit/teacherView.test.ts tests/unit/reportService.test.ts tests/unit/reportPrintExport.test.ts tests/unit/syncOutbox.test.ts tests/unit/conflictResolution.test.ts tests/unit/syncEngine.test.ts tests/unit/teacherAccess.test.ts tests/unit/backendAuth.test.ts tests/unit/backendOwnership.test.ts tests/unit/backendSync.test.ts tests/unit/backendTeacher.test.ts tests/unit/backendIntegration.test.ts tests/unit/httpRemoteSyncClient.test.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@google/genai": "^2.4.0",
+    "@prisma/client": "^6.4.1",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "bcryptjs": "^3.0.3",
     "dexie": "^4.4.6",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "fastify": "^5.12.5",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
@@ -25,6 +31,7 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
@@ -32,6 +39,7 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "fake-indexeddb": "^6.2.5",
+    "prisma": "^6.4.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
