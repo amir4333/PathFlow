@@ -67,6 +67,26 @@ The system is partitioned into five distinct architectural layers:
 * **Rule**: Synchronization is strictly isolated as an auxiliary concern; the application is fully functional offline even if synchronization is disabled or unavailable.
 * **Status**: **Implemented (Phase 14A Architecture & Contracts)**. Durable Outbox mutation queue (`SyncOutbox`), deterministic conflict resolution (`ConflictResolver`), sync engine lifecycle (`SyncEngine`), remote client abstraction (`RemoteSyncClient`), and student-issued read-only teacher access grants (`TeacherAccessManager`, `TeacherRemoteAdapter`). See `docs/sync-and-teacher-access-architecture.md` for full specification.
 
+### 6. Desktop Host Shell (`electron/`)
+* **Role**: A lightweight runtime container that hosts the production React frontend for native installation on **Windows 10 and Windows 11 (64-bit)**.
+* **Rule**: Strict boundary preservation:
+  ```text
+  Desktop Shell (Electron Host)
+       │ (Sandboxed WebPreferences: contextIsolation=true, nodeIntegration=false)
+       ▼
+  React UI (Presentation Layer)
+       ▼
+  Application Layer (Workflows, Services)
+       ▼
+  Domain Layer (Entities, Invariants)
+       ▼
+  Local Data (Dexie IndexedDB & localStorage Outbox)
+       ▼ (Optional HTTPS Wire)
+  Remote Fastify Backend & PostgreSQL
+  ```
+  The desktop host contains **zero domain logic, zero database files, and zero state duplicates**. It simply provides an installable desktop window, Start Menu / Desktop shortcuts, and native window lifecycle handling.
+* **Status**: **Implemented (Phase 17)**. Electron main process (`electron/main.ts`), secure preload (`electron/preload.ts`), and `electron-builder` configuration for Windows NSIS installer and portable executable are active. See `docs/desktop-app.md` for full details.
+
 ---
 
 ## Why These Layers Are Separated
@@ -90,6 +110,7 @@ The system is partitioned into five distinct architectural layers:
 | **Domain** | Services & Invariant Rules | **Implemented** | Phase 2 |
 | **Domain & Data** | Session & Time Tracking Foundation | **Implemented** | Phase 4 |
 | **Data** | Local IndexedDB Storage & Repositories | **Implemented** | Phase 3 & Phase 4 |
-| **Data** | Remote API & Repositories | Conceptual Directory | Future Phase |
-| **Sync** | Queue, Engine, Conflict | Conceptual Directory | Future Phase |
-| **Backend** | PostgreSQL & Sync Server | Conceptual Directory | Future Phase |
+| **Data** | Remote API & Repositories | **Implemented** | Phase 14B & Phase 15 |
+| **Sync** | Queue, Engine, Conflict | **Implemented** | Phase 14A & Phase 14B |
+| **Backend** | Fastify & PostgreSQL (Docker/Prisma) | **Implemented** | Phase 14B & Phase 15 |
+| **Desktop Host** | Electron Desktop Wrapper (Windows 10/11 x64) | **Implemented** | Phase 17 |

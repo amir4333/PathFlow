@@ -3,16 +3,56 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist dist-electron dist-electron-packages server.js",
     "lint": "tsc --noEmit",
     "server": "tsx server/src/index.ts",
     "db:generate": "prisma generate --schema=server/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema=server/prisma/schema.prisma",
-    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts tests/unit/userPreferencesAndCalendar.test.ts tests/unit/sessionHistoryQuery.test.ts tests/unit/sessionHistoryUX.test.ts tests/unit/weeklyPlanningUI.test.ts tests/unit/weeklyPlanningInteraction.test.ts tests/unit/progressViewCore.test.ts tests/unit/progressVisualizations.test.ts tests/unit/teacherView.test.ts tests/unit/reportService.test.ts tests/unit/reportPrintExport.test.ts tests/unit/syncOutbox.test.ts tests/unit/conflictResolution.test.ts tests/unit/syncEngine.test.ts tests/unit/teacherAccess.test.ts tests/unit/backendAuth.test.ts tests/unit/backendOwnership.test.ts tests/unit/backendSync.test.ts tests/unit/backendTeacher.test.ts tests/unit/backendIntegration.test.ts tests/unit/httpRemoteSyncClient.test.ts tests/unit/accountAuthUx.test.ts tests/unit/syncEngineUxAndLifecycle.test.ts tests/unit/multiDeviceRealHttpSync.test.ts tests/unit/productionReadiness.test.ts"
+    "desktop:compile": "esbuild electron/main.ts --bundle --platform=node --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --external:electron --outfile=dist-electron/preload.cjs",
+    "desktop:build": "npm run build && npm run desktop:compile",
+    "desktop:dev": "concurrently -k \"vite --port=3000 --host=0.0.0.0\" \"wait-on http://localhost:3000 && npm run desktop:compile && electron dist-electron/main.cjs --dev\"",
+    "desktop:package": "npm run desktop:build && electron-builder --win --x64",
+    "test": "tsx --test tests/unit/smoke.test.ts tests/unit/domain.test.ts tests/unit/persistence.test.ts tests/unit/session.test.ts tests/unit/weeklyPlanning.test.ts tests/unit/progressReview.test.ts tests/unit/application.test.ts tests/unit/goalsRoadmapsSlice.test.ts tests/unit/tasksSlice.test.ts tests/unit/activeSessionTimer.test.ts tests/unit/manualSessionEntry.test.ts tests/unit/userPreferencesAndCalendar.test.ts tests/unit/sessionHistoryQuery.test.ts tests/unit/sessionHistoryUX.test.ts tests/unit/weeklyPlanningUI.test.ts tests/unit/weeklyPlanningInteraction.test.ts tests/unit/progressViewCore.test.ts tests/unit/progressVisualizations.test.ts tests/unit/teacherView.test.ts tests/unit/reportService.test.ts tests/unit/reportPrintExport.test.ts tests/unit/syncOutbox.test.ts tests/unit/conflictResolution.test.ts tests/unit/syncEngine.test.ts tests/unit/teacherAccess.test.ts tests/unit/backendAuth.test.ts tests/unit/backendOwnership.test.ts tests/unit/backendSync.test.ts tests/unit/backendTeacher.test.ts tests/unit/backendIntegration.test.ts tests/unit/httpRemoteSyncClient.test.ts tests/unit/accountAuthUx.test.ts tests/unit/syncEngineUxAndLifecycle.test.ts tests/unit/multiDeviceRealHttpSync.test.ts tests/unit/productionReadiness.test.ts tests/unit/desktopPackaging.test.ts"
+  },
+  "build": {
+    "appId": "com.amir4333.pathflow",
+    "productName": "PathFlow",
+    "directories": {
+      "output": "dist-electron-packages"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "perMachine": false
+    }
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
@@ -38,11 +78,16 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^10.0.5",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.25.0",
     "fake-indexeddb": "^6.2.5",
     "prisma": "^6.4.1",
+    "rimraf": "^6.1.3",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "wait-on": "^9.1.0"
   }
 }
