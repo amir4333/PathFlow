@@ -10,19 +10,37 @@ import { generateEntityId } from '../../domain';
 export const SERVER_URL_STORAGE_KEY = 'pathflow_server_url';
 export const DEVICE_ID_STORAGE_KEY = 'pathflow_device_id';
 
+export function isValidServerUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return false;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.host;
+  } catch {
+    return false;
+  }
+}
+
 export function getDefaultServerUrl(): string {
   // 1. Environment variable injected at build time
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) {
     const envUrl = String(import.meta.env.VITE_BACKEND_URL).trim().replace(/\/+$/, '');
-    if (envUrl.length > 0) {
+    if (isValidServerUrl(envUrl)) {
       return envUrl;
     }
   }
 
   // 2. In production browser runtime, use current origin as default backend (e.g. reverse proxy)
+  // Ensure origin is a valid HTTP/HTTPS origin (not file:// or null when running in Electron or packaged desktop)
   if (typeof import.meta !== 'undefined' && import.meta.env?.PROD) {
     if (typeof window !== 'undefined' && window.location?.origin) {
-      return window.location.origin;
+      const origin = window.location.origin;
+      if (isValidServerUrl(origin)) {
+        return origin;
+      }
     }
   }
 
@@ -33,8 +51,12 @@ export function getDefaultServerUrl(): string {
 export function getStoredServerUrl(): string {
   if (typeof window !== 'undefined' && window.localStorage) {
     const stored = window.localStorage.getItem(SERVER_URL_STORAGE_KEY);
-    if (stored && stored.trim().length > 0) {
-      return stored.trim();
+    if (stored && isValidServerUrl(stored)) {
+      return stored.trim().replace(/\/+$/, '');
+    }
+    // Clean up invalid legacy entries (e.g. 'file://' or malformed values)
+    if (stored) {
+      window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
     }
   }
   return getDefaultServerUrl();
@@ -43,10 +65,12 @@ export function getStoredServerUrl(): string {
 export function saveStoredServerUrl(url: string): void {
   if (typeof window !== 'undefined' && window.localStorage) {
     const trimmed = url.trim().replace(/\/+$/, '');
-    if (trimmed.length > 0) {
-      window.localStorage.setItem(SERVER_URL_STORAGE_KEY, trimmed);
-    } else {
+    if (!trimmed) {
       window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+      return;
+    }
+    if (isValidServerUrl(trimmed)) {
+      window.localStorage.setItem(SERVER_URL_STORAGE_KEY, trimmed);
     }
   }
 }

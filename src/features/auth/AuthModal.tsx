@@ -8,8 +8,9 @@
  * - Zero loss of local data
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSync } from '../../sync/context/SyncContext';
+import { getDefaultServerUrl, isValidServerUrl } from '../../sync/config/serverConfig';
 import {
   X,
   LogIn,
@@ -37,9 +38,17 @@ export const AuthModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
-  const [customServerUrl, setCustomServerUrl] = useState(serverUrl);
+  const [customServerUrl, setCustomServerUrl] = useState(() =>
+    isValidServerUrl(serverUrl) ? serverUrl : getDefaultServerUrl()
+  );
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isValidServerUrl(serverUrl)) {
+      setCustomServerUrl(serverUrl);
+    }
+  }, [serverUrl]);
 
   if (!isAuthModalOpen) return null;
 
@@ -55,6 +64,13 @@ export const AuthModal: React.FC = () => {
     if (!password || password.length < 6) {
       setLocalError('Password must be at least 6 characters.');
       return;
+    }
+
+    if (showServerConfig && customServerUrl.trim()) {
+      if (!isValidServerUrl(customServerUrl)) {
+        setLocalError('Server connection URL must start with http:// or https:// (e.g. http://localhost:3001)');
+        return;
+      }
     }
 
     try {

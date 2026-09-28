@@ -35,6 +35,8 @@ import {
   getStoredServerUrl,
   saveStoredServerUrl,
   getOrCreateDeviceId,
+  isValidServerUrl,
+  getDefaultServerUrl,
 } from '../config/serverConfig';
 import { TeacherHttpClient } from '../teacher/teacherClient';
 import { PathFlowRepositories, createLocalRepositories } from '../../data/repositories/local';
@@ -102,9 +104,12 @@ export const SyncProvider: React.FC<{
   initialServerUrl?: string;
   customOutbox?: SyncOutboxRepository;
 }> = ({ children, initialServerUrl, customOutbox }) => {
-  const [serverUrlState, setServerUrlState] = useState<string>(() =>
-    initialServerUrl ?? getStoredServerUrl()
-  );
+  const [serverUrlState, setServerUrlState] = useState<string>(() => {
+    if (initialServerUrl && isValidServerUrl(initialServerUrl)) {
+      return initialServerUrl.trim().replace(/\/+$/, '');
+    }
+    return getStoredServerUrl();
+  });
   const [session, setSession] = useState<AuthSession | null>(() => loadStoredSession());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -200,7 +205,14 @@ export const SyncProvider: React.FC<{
     if (!session) return;
     let isCancelled = false;
 
-    verifyUserSession(session.serverUrl || serverUrlState, session.token)
+    const verifyUrl =
+      session.serverUrl && isValidServerUrl(session.serverUrl)
+        ? session.serverUrl
+        : isValidServerUrl(serverUrlState)
+        ? serverUrlState
+        : getDefaultServerUrl();
+
+    verifyUserSession(verifyUrl, session.token)
       .then((user) => {
         if (!isCancelled && user) {
           setSession((prev) => (prev ? { ...prev, user } : prev));
@@ -250,6 +262,7 @@ export const SyncProvider: React.FC<{
 
   // Server URL update
   const setServerUrl = useCallback((url: string) => {
+    if (!isValidServerUrl(url)) return;
     const clean = url.trim().replace(/\/+$/, '');
     saveStoredServerUrl(clean);
     setServerUrlState(clean);
@@ -260,12 +273,17 @@ export const SyncProvider: React.FC<{
     async (email: string, password: string, customServerUrl?: string) => {
       setIsAuthenticating(true);
       setAuthError(null);
-      const targetUrl = customServerUrl || serverUrlState;
+      const targetUrl =
+        customServerUrl && isValidServerUrl(customServerUrl)
+          ? customServerUrl.trim().replace(/\/+$/, '')
+          : isValidServerUrl(serverUrlState)
+          ? serverUrlState
+          : getDefaultServerUrl();
 
       try {
         const newSession = await loginUser(targetUrl, email, password);
         setSession(newSession);
-        if (customServerUrl) {
+        if (customServerUrl && isValidServerUrl(customServerUrl)) {
           setServerUrl(customServerUrl);
         }
         setIsAuthModalOpen(false);
@@ -288,12 +306,17 @@ export const SyncProvider: React.FC<{
     ) => {
       setIsAuthenticating(true);
       setAuthError(null);
-      const targetUrl = customServerUrl || serverUrlState;
+      const targetUrl =
+        customServerUrl && isValidServerUrl(customServerUrl)
+          ? customServerUrl.trim().replace(/\/+$/, '')
+          : isValidServerUrl(serverUrlState)
+          ? serverUrlState
+          : getDefaultServerUrl();
 
       try {
         const newSession = await registerUser(targetUrl, email, password, role);
         setSession(newSession);
-        if (customServerUrl) {
+        if (customServerUrl && isValidServerUrl(customServerUrl)) {
           setServerUrl(customServerUrl);
         }
         setIsAuthModalOpen(false);

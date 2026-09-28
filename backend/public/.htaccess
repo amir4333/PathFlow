@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pass Authorization header to PHP in CGI/FastCGI environments
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Pass X-Teacher-Token header to PHP
+    RewriteCond %{HTTP:X-Teacher-Token} .
+    RewriteRule .* - [E=HTTP_X_TEACHER_TOKEN:%{HTTP:X-Teacher-Token}]
+
+    # If the requested filename exists as a real file or directory, serve it directly
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Otherwise route all requests to index.php
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>

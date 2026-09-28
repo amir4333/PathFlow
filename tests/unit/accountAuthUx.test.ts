@@ -12,6 +12,13 @@ import {
   AuthError,
   AUTH_SESSION_STORAGE_KEY,
 } from '../../src/sync/auth/authSession';
+import {
+  isValidServerUrl,
+  getDefaultServerUrl,
+  getStoredServerUrl,
+  saveStoredServerUrl,
+  SERVER_URL_STORAGE_KEY,
+} from '../../src/sync/config/serverConfig';
 
 // Mock localStorage for Node test environment
 class MockLocalStorage {
@@ -145,4 +152,43 @@ test('Account & Auth UX: Server unavailable / network error preservation', async
       return true;
     }
   );
+});
+
+test('Server Config: URL validation, desktop file:// protection, and safe fallback', () => {
+  // Validation checks
+  assert.equal(isValidServerUrl('http://localhost:3001'), true);
+  assert.equal(isValidServerUrl('https://api.pathflow.example'), true);
+  assert.equal(isValidServerUrl('http://192.168.1.100:8080'), true);
+
+  // Invalid schemas / origins
+  assert.equal(isValidServerUrl('file://'), false);
+  assert.equal(isValidServerUrl('file:///path/to/app'), false);
+  assert.equal(isValidServerUrl('null'), false);
+  assert.equal(isValidServerUrl(''), false);
+  assert.equal(isValidServerUrl(null as any), false);
+  assert.equal(isValidServerUrl('ftp://server.example'), false);
+  assert.equal(isValidServerUrl('javascript:alert(1)'), false);
+
+  const mockStorage = new MockLocalStorage();
+  (global as any).window = {
+    localStorage: mockStorage,
+    location: { origin: 'file://', protocol: 'file:' },
+  };
+
+  // When loaded from file:// (Electron/desktop package), default URL must NOT be file://
+  const defaultUrl = getDefaultServerUrl();
+  assert.equal(defaultUrl, 'http://localhost:3001');
+
+  // If a legacy or accidental file:// was written to localStorage, getStoredServerUrl must discard it
+  mockStorage.setItem(SERVER_URL_STORAGE_KEY, 'file://');
+  assert.equal(getStoredServerUrl(), 'http://localhost:3001');
+  assert.equal(mockStorage.getItem(SERVER_URL_STORAGE_KEY), null, 'Invalid key must be wiped');
+
+  // Storing valid URLs should persist
+  saveStoredServerUrl('https://sync.pathflow.example/');
+  assert.equal(getStoredServerUrl(), 'https://sync.pathflow.example');
+
+  // Attempting to save invalid URL should be rejected
+  saveStoredServerUrl('file:///tmp/app');
+  assert.equal(getStoredServerUrl(), 'https://sync.pathflow.example', 'Invalid URL save ignored or wiped');
 });

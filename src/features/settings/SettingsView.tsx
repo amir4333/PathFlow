@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUserPreferences } from '../../app/preferences';
 import { useSync } from '../../sync/context/SyncContext';
 import { TeacherPermission, ALL_TEACHER_PERMISSIONS } from '../../sync/types';
+import { getDefaultServerUrl, isValidServerUrl } from '../../sync/config/serverConfig';
 import {
   Languages,
   Calendar as CalendarIcon,
@@ -58,8 +59,18 @@ export const SettingsView: React.FC = () => {
   } = useSync();
 
   // Local state for server URL editing
-  const [urlInput, setUrlInput] = useState(serverUrl);
+  const [urlInput, setUrlInput] = useState(() =>
+    isValidServerUrl(serverUrl) ? serverUrl : getDefaultServerUrl()
+  );
   const [isUrlSaved, setIsUrlSaved] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  // Sync input if serverUrl in context updates
+  useEffect(() => {
+    if (isValidServerUrl(serverUrl)) {
+      setUrlInput(serverUrl);
+    }
+  }, [serverUrl]);
 
   // Local state for creating teacher grant
   const [isCreatingGrant, setIsCreatingGrant] = useState(false);
@@ -77,9 +88,22 @@ export const SettingsView: React.FC = () => {
 
   const handleSaveUrl = (e: React.FormEvent) => {
     e.preventDefault();
-    setServerUrl(urlInput);
+    setUrlError(null);
+    const trimmed = urlInput.trim();
+    if (!isValidServerUrl(trimmed)) {
+      setUrlError('Server URL must start with http:// or https:// (e.g. http://localhost:3001)');
+      return;
+    }
+    setServerUrl(trimmed);
     setIsUrlSaved(true);
     setTimeout(() => setIsUrlSaved(false), 2000);
+  };
+
+  const handleResetUrl = () => {
+    const defaultUrl = getDefaultServerUrl();
+    setUrlInput(defaultUrl);
+    setServerUrl(defaultUrl);
+    setUrlError(null);
   };
 
   const togglePermission = (perm: TeacherPermission) => {
@@ -318,16 +342,16 @@ export const SettingsView: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setUrlInput('http://localhost:3001');
-                  setServerUrl('http://localhost:3001');
-                }}
+                onClick={handleResetUrl}
                 className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition cursor-pointer"
               >
                 Reset Default
               </button>
             </div>
           </form>
+          {urlError && (
+            <p className="text-xs text-rose-500 dark:text-rose-400 font-medium">{urlError}</p>
+          )}
         </div>
 
         {/* Teacher Access Grants Section */}
