@@ -36,22 +36,51 @@ This runbook documents the deployment, configuration, and verification procedure
 
 ---
 
-## 3. Database Deployment Procedure
+## 3. Database Deployment Procedure & WordPress/WooCommerce Coexistence
 
-1. **Create MySQL Database in cPanel**:
-   * Navigate to **cPanel > MySQL® Databases**.
-   * Create a new database: e.g. `user_pathflow`.
-   * Create a database user with a strong, random password.
-   * Add the user to the database with `ALL PRIVILEGES`.
+### Single Shared Database Model
+In hosting environments constrained to a single MySQL database (e.g. shared with an existing WordPress/WooCommerce installation using tables like `5bez_*`), PathFlow isolates its entire data schema using a validated table prefix:
+* **Default Prefix**: `pf_` (configured via `DB_TABLE_PREFIX=pf_`).
+* **Zero Contamination**: PathFlow creates only `pf_*` tables. It never queries, alters, drops, or defines foreign keys to any existing WordPress `5bez_*` tables.
+* **Security Validation**: `Database::getPrefix()` enforces regex pattern `^[A-Za-z0-9_]*$`, and `Database::table($logical)` strictly validates against the 10 known logical domain tables.
+
+### Physical Table Mapping
+| Logical Model | Physical MySQL Table | Purpose |
+|---|---|---|
+| `User` | `pf_User` | Accounts, bcrypt credentials, role (STUDENT, TEACHER) |
+| `Goal` | `pf_Goal` | High-level student goals and targets |
+| `Roadmap` | `pf_Roadmap` | Progression roadmaps attached to goals |
+| `Task` | `pf_Task` | Executable tasks and work items |
+| `Session` | `pf_Session` | Dedicated study and practice sessions |
+| `WeeklyPlan` | `pf_WeeklyPlan` | Weekly calendar allocation aggregates |
+| `WeeklyPlanItem` | `pf_WeeklyPlanItem` | Granular planned task items and minutes |
+| `SyncMutationRecord` | `pf_SyncMutationRecord` | Idempotent wire mutation records with device tracking |
+| `Tombstone` | `pf_Tombstone` | Soft-deletion markers propagating across devices |
+| `TeacherAccessGrant` | `pf_TeacherAccessGrant` | Read-only bearer tokens (`pt_*`) and permissions |
+
+### Database Deployment Steps
+1. **Configure Database Credentials**:
+   In your `.env` (or `backend/.env`), set your shared or dedicated database credentials:
+   ```ini
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=amiir1_VieJamqkf
+   DB_USERNAME=amiir1_dbuser
+   DB_PASSWORD=your_production_password
+   DB_CHARSET=utf8mb4
+   DB_COLLATION=utf8mb4_unicode_ci
+   DB_TABLE_PREFIX=pf_
+   ```
 
 2. **Initialize Database Schema**:
    * **Option 1 (Command Line / SSH or Terminal in cPanel)**:
      ```bash
      php backend/database/init.php
      ```
+     This automatically loads the configured `DB_TABLE_PREFIX`, creates all 10 prefixed tables via `schema.sql`, and runs verification.
    * **Option 2 (phpMyAdmin)**:
      * In cPanel, open **phpMyAdmin**.
-     * Select `user_pathflow`.
+     * Select your database (e.g. `amiir1_VieJamqkf`).
      * Click **Import** > Select `backend/database/schema.sql` > Click **Go**.
 
 3. **Verify Database Invariants**:
@@ -59,7 +88,7 @@ This runbook documents the deployment, configuration, and verification procedure
      ```bash
      php backend/database/verify.php
      ```
-   * Expected: All 10 tables (`User`, `Goal`, `Roadmap`, `Task`, `Session`, `WeeklyPlan`, `WeeklyPlanItem`, `SyncMutationRecord`, `Tombstone`, `TeacherAccessGrant`) confirmed.
+   * Expected output: All 10 physical tables confirmed (`pf_User`, `pf_Goal`, `pf_Roadmap`, `pf_Task`, `pf_Session`, `pf_WeeklyPlan`, `pf_WeeklyPlanItem`, `pf_SyncMutationRecord`, `pf_Tombstone`, `pf_TeacherAccessGrant`), correct indexes, foreign keys referencing `pf_User`, and zero collisions with `5bez_*`.
 
 ---
 
@@ -76,6 +105,7 @@ DB_USERNAME=user_dbuser
 DB_PASSWORD=strong_production_password_here
 DB_CHARSET=utf8mb4
 DB_COLLATION=utf8mb4_unicode_ci
+DB_TABLE_PREFIX=pf_
 
 # In cPanel if connecting via Unix socket (optional):
 # DB_SOCKET=/var/lib/mysql/mysql.sock

@@ -56,7 +56,9 @@ class UserRepository
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT id, email, passwordHash, role, createdAt, updatedAt FROM `User` WHERE LOWER(email) = LOWER(:email) LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT id, email, passwordHash, role, createdAt, updatedAt FROM ' . Database::table('User') . ' WHERE LOWER(email) = LOWER(:email) LIMIT 1'
+        );
         $stmt->execute(['email' => $normalizedEmail]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -73,7 +75,9 @@ class UserRepository
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT id, email, passwordHash, role, createdAt, updatedAt FROM `User` WHERE id = :id LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT id, email, passwordHash, role, createdAt, updatedAt FROM ' . Database::table('User') . ' WHERE id = :id LIMIT 1'
+        );
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -104,7 +108,7 @@ class UserRepository
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `User` (id, email, passwordHash, role, createdAt, updatedAt) VALUES (:id, :email, :passwordHash, :role, :createdAt, :updatedAt)'
+            'INSERT INTO ' . Database::table('User') . ' (id, email, passwordHash, role, createdAt, updatedAt) VALUES (:id, :email, :passwordHash, :role, :createdAt, :updatedAt)'
         );
         $stmt->execute([
             'id' => $id,

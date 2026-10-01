@@ -34,7 +34,7 @@ test('Phase 5 Validation: Frontend configuration safely resolves production back
   assert.match(url, /^https?:\/\//);
 });
 
-test('Phase 5 Validation: PHP schema.sql exists and contains 10 production tables', () => {
+test('Phase 5 Validation: PHP schema.sql exists and contains 10 production tables with pf_ prefix', () => {
   const schemaPath = path.resolve(process.cwd(), 'backend/database/schema.sql');
   assert.ok(fs.existsSync(schemaPath), 'schema.sql must exist');
 
@@ -54,10 +54,17 @@ test('Phase 5 Validation: PHP schema.sql exists and contains 10 production table
 
   for (const table of requiredTables) {
     assert.ok(
-      content.includes(`CREATE TABLE IF NOT EXISTS \`${table}\``),
-      `Table '${table}' must be defined in schema.sql`
+      content.includes(`CREATE TABLE IF NOT EXISTS \`pf_${table}\``),
+      `Table 'pf_${table}' must be defined in schema.sql`
     );
   }
+
+  // Ensure foreign keys point to pf_User, not unprefixed User
+  assert.ok(content.includes('REFERENCES `pf_User`'), 'Foreign keys must reference pf_User');
+  assert.ok(!content.includes('REFERENCES `User`'), 'No foreign keys should reference unprefixed User');
+
+  // Ensure complete isolation from WordPress tables (5bez_*)
+  assert.ok(!content.includes('5bez_'), 'PathFlow schema must not reference any WordPress 5bez_* tables');
 
   assert.ok(content.includes('ENGINE=InnoDB'), 'Must use InnoDB engine');
   assert.ok(content.includes('utf8mb4'), 'Must use utf8mb4 encoding');

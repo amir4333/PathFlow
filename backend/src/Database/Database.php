@@ -17,6 +17,83 @@ class Database
     private static ?PDO $pdo = null;
 
     /**
+     * Allowed logical tables in the PathFlow domain.
+     */
+    public const LOGICAL_TABLES = [
+        'User',
+        'Goal',
+        'Roadmap',
+        'Task',
+        'Session',
+        'WeeklyPlan',
+        'WeeklyPlanItem',
+        'SyncMutationRecord',
+        'Tombstone',
+        'TeacherAccessGrant',
+    ];
+
+    /**
+     * Get and validate the configured database table prefix.
+     * Defaults to 'pf_' if not explicitly defined.
+     * Enforces strict regex validation ^[A-Za-z0-9_]*$ to prevent SQL injection.
+     */
+    public static function getPrefix(): string
+    {
+        $prefix = Config::get('DB_TABLE_PREFIX', 'pf_');
+        if ($prefix === null || $prefix === '') {
+            $prefix = 'pf_';
+        }
+
+        if (!preg_match('/^[A-Za-z0-9_]*$/', (string)$prefix)) {
+            throw new \InvalidArgumentException(
+                sprintf("Invalid DB_TABLE_PREFIX '%s'. Prefix must match pattern ^[A-Za-z0-9_]*$", $prefix)
+            );
+        }
+
+        return (string)$prefix;
+    }
+
+    /**
+     * Validate that the given name is a recognized PathFlow logical table.
+     */
+    public static function validateLogicalTable(string $logicalName): void
+    {
+        if (!in_array($logicalName, self::LOGICAL_TABLES, true)) {
+            throw new \InvalidArgumentException(
+                sprintf("Invalid logical table name '%s'. Must be one of: %s", $logicalName, implode(', ', self::LOGICAL_TABLES))
+            );
+        }
+    }
+
+    /**
+     * Resolve logical table name to unquoted physical table name (e.g. 'User' -> 'pf_User').
+     */
+    public static function rawTable(string $logicalName): string
+    {
+        self::validateLogicalTable($logicalName);
+        return self::getPrefix() . $logicalName;
+    }
+
+    /**
+     * Resolve logical table name to quoted physical SQL identifier (e.g. 'User' -> '`pf_User`').
+     */
+    public static function table(string $logicalName): string
+    {
+        return '`' . self::rawTable($logicalName) . '`';
+    }
+
+    /**
+     * Safe SQL placeholder resolver.
+     * Converts trusted placeholders like {{User}} into backtick-quoted physical table identifiers like `pf_User`.
+     */
+    public static function sql(string $query): string
+    {
+        return preg_replace_callback('/\{\{([A-Za-z0-9_]+)\}\}/', function (array $matches): string {
+            return self::table($matches[1]);
+        }, $query);
+    }
+
+    /**
      * Get or initialize the PDO connection instance.
      * Supports configurable parameters or defaults to Config values.
      */

@@ -80,7 +80,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'SELECT * FROM `SyncMutationRecord` WHERE studentId = :studentId AND deviceId = :deviceId AND clientMutationId = :clientMutationId LIMIT 1'
+            'SELECT * FROM ' . Database::table('SyncMutationRecord') . ' WHERE studentId = :studentId AND deviceId = :deviceId AND clientMutationId = :clientMutationId LIMIT 1'
         );
         $stmt->execute([
             'studentId' => $studentId,
@@ -123,7 +123,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `SyncMutationRecord` (id, studentId, deviceId, clientMutationId, entityType, entityId, operation, payload, timestamp)
+            'INSERT INTO ' . Database::table('SyncMutationRecord') . ' (id, studentId, deviceId, clientMutationId, entityType, entityId, operation, payload, timestamp)
              VALUES (:id, :studentId, :deviceId, :clientMutationId, :entityType, :entityId, :operation, :payload, :timestamp)'
         );
         $stmt->execute([
@@ -167,14 +167,14 @@ class SyncStore
         $pdo = Database::getConnection();
         if (is_int($queryCursor) || is_numeric($queryCursor)) {
             $stmt = $pdo->prepare(
-                'SELECT * FROM `SyncMutationRecord` WHERE studentId = :studentId AND sequence > :cursor ORDER BY sequence ASC LIMIT :limit'
+                'SELECT * FROM ' . Database::table('SyncMutationRecord') . ' WHERE studentId = :studentId AND sequence > :cursor ORDER BY sequence ASC LIMIT :limit'
             );
             $stmt->bindValue(':studentId', $studentId, PDO::PARAM_STR);
             $stmt->bindValue(':cursor', (int)$queryCursor, PDO::PARAM_INT);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         } else {
             $stmt = $pdo->prepare(
-                'SELECT * FROM `SyncMutationRecord` WHERE studentId = :studentId AND timestamp > :cursor ORDER BY sequence ASC LIMIT :limit'
+                'SELECT * FROM ' . Database::table('SyncMutationRecord') . ' WHERE studentId = :studentId AND timestamp > :cursor ORDER BY sequence ASC LIMIT :limit'
             );
             $stmt->bindValue(':studentId', $studentId, PDO::PARAM_STR);
             $stmt->bindValue(':cursor', $queryCursor, PDO::PARAM_STR);
@@ -197,7 +197,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT MAX(sequence) as maxSeq FROM `SyncMutationRecord` WHERE studentId = :studentId');
+        $stmt = $pdo->prepare('SELECT MAX(sequence) as maxSeq FROM ' . Database::table('SyncMutationRecord') . ' WHERE studentId = :studentId');
         $stmt->execute(['studentId' => $studentId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return isset($row['maxSeq']) && $row['maxSeq'] !== null ? (int)$row['maxSeq'] : 0;
@@ -236,7 +236,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `Tombstone` (id, studentId, entityType, entityId, deletedAt)
+            'INSERT INTO ' . Database::table('Tombstone') . ' (id, studentId, entityType, entityId, deletedAt)
              VALUES (:id, :studentId, :entityType, :entityId, :deletedAt)
              ON DUPLICATE KEY UPDATE deletedAt = VALUES(deletedAt)'
         );
@@ -275,13 +275,13 @@ class SyncStore
         $pdo = Database::getConnection();
         if (is_int($queryCursor) || is_numeric($queryCursor)) {
             $stmt = $pdo->prepare(
-                'SELECT entityType, entityId, deletedAt FROM `Tombstone` WHERE studentId = :studentId AND sequence > :cursor ORDER BY sequence ASC'
+                'SELECT entityType, entityId, deletedAt FROM ' . Database::table('Tombstone') . ' WHERE studentId = :studentId AND sequence > :cursor ORDER BY sequence ASC'
             );
             $stmt->bindValue(':studentId', $studentId, PDO::PARAM_STR);
             $stmt->bindValue(':cursor', (int)$queryCursor, PDO::PARAM_INT);
         } else {
             $stmt = $pdo->prepare(
-                'SELECT entityType, entityId, deletedAt FROM `Tombstone` WHERE studentId = :studentId AND deletedAt > :cursor ORDER BY sequence ASC'
+                'SELECT entityType, entityId, deletedAt FROM ' . Database::table('Tombstone') . ' WHERE studentId = :studentId AND deletedAt > :cursor ORDER BY sequence ASC'
             );
             $stmt->bindValue(':studentId', $studentId, PDO::PARAM_STR);
             $stmt->bindValue(':cursor', $queryCursor, PDO::PARAM_STR);
@@ -301,7 +301,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `Goal` (id, studentId, title, description, status, createdAt, updatedAt)
+            'INSERT INTO ' . Database::table('Goal') . ' (id, studentId, title, description, status, createdAt, updatedAt)
              VALUES (:id, :studentId, :title, :description, :status, :createdAt, :updatedAt)
              ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description), status = VALUES(status), updatedAt = VALUES(updatedAt)'
         );
@@ -326,7 +326,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `Goal` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('Goal') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -343,7 +343,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `Goal` WHERE studentId = :studentId ORDER BY createdAt ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('Goal') . ' WHERE studentId = :studentId ORDER BY createdAt ASC');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -357,7 +357,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `Roadmap` (id, studentId, goalId, title, createdAt, updatedAt)
+            'INSERT INTO ' . Database::table('Roadmap') . ' (id, studentId, goalId, title, createdAt, updatedAt)
              VALUES (:id, :studentId, :goalId, :title, :createdAt, :updatedAt)
              ON DUPLICATE KEY UPDATE goalId = VALUES(goalId), title = VALUES(title), updatedAt = VALUES(updatedAt)'
         );
@@ -381,7 +381,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `Roadmap` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('Roadmap') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -398,7 +398,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `Roadmap` WHERE studentId = :studentId ORDER BY createdAt ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('Roadmap') . ' WHERE studentId = :studentId ORDER BY createdAt ASC');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -412,7 +412,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `Task` (id, studentId, roadmapId, title, description, status, priority, estimatedMinutes, createdAt, updatedAt, completedAt)
+            'INSERT INTO ' . Database::table('Task') . ' (id, studentId, roadmapId, title, description, status, priority, estimatedMinutes, createdAt, updatedAt, completedAt)
              VALUES (:id, :studentId, :roadmapId, :title, :description, :status, :priority, :estimatedMinutes, :createdAt, :updatedAt, :completedAt)
              ON DUPLICATE KEY UPDATE roadmapId = VALUES(roadmapId), title = VALUES(title), description = VALUES(description),
              status = VALUES(status), priority = VALUES(priority), estimatedMinutes = VALUES(estimatedMinutes),
@@ -443,7 +443,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `Task` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('Task') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -460,7 +460,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `Task` WHERE studentId = :studentId ORDER BY createdAt ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('Task') . ' WHERE studentId = :studentId ORDER BY createdAt ASC');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -474,7 +474,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `Session` (id, studentId, taskId, startedAt, endedAt, durationMinutes)
+            'INSERT INTO ' . Database::table('Session') . ' (id, studentId, taskId, startedAt, endedAt, durationMinutes)
              VALUES (:id, :studentId, :taskId, :startedAt, :endedAt, :durationMinutes)
              ON DUPLICATE KEY UPDATE taskId = VALUES(taskId), startedAt = VALUES(startedAt), endedAt = VALUES(endedAt), durationMinutes = VALUES(durationMinutes)'
         );
@@ -498,7 +498,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `Session` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('Session') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -515,7 +515,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `Session` WHERE studentId = :studentId ORDER BY startedAt ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('Session') . ' WHERE studentId = :studentId ORDER BY startedAt ASC');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -529,7 +529,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `WeeklyPlan` (id, studentId, weekIdentifier, title, targetMinutes, createdAt, updatedAt)
+            'INSERT INTO ' . Database::table('WeeklyPlan') . ' (id, studentId, weekIdentifier, title, targetMinutes, createdAt, updatedAt)
              VALUES (:id, :studentId, :weekIdentifier, :title, :targetMinutes, :createdAt, :updatedAt)
              ON DUPLICATE KEY UPDATE weekIdentifier = VALUES(weekIdentifier), title = VALUES(title), targetMinutes = VALUES(targetMinutes), updatedAt = VALUES(updatedAt)'
         );
@@ -554,7 +554,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `WeeklyPlan` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('WeeklyPlan') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -571,7 +571,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `WeeklyPlan` WHERE studentId = :studentId ORDER BY createdAt ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('WeeklyPlan') . ' WHERE studentId = :studentId ORDER BY createdAt ASC');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -585,7 +585,7 @@ class SyncStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `WeeklyPlanItem` (id, studentId, weeklyPlanId, taskId, targetDate, plannedMinutes, isCompleted)
+            'INSERT INTO ' . Database::table('WeeklyPlanItem') . ' (id, studentId, weeklyPlanId, taskId, targetDate, plannedMinutes, isCompleted)
              VALUES (:id, :studentId, :weeklyPlanId, :taskId, :targetDate, :plannedMinutes, :isCompleted)
              ON DUPLICATE KEY UPDATE weeklyPlanId = VALUES(weeklyPlanId), taskId = VALUES(taskId),
              targetDate = VALUES(targetDate), plannedMinutes = VALUES(plannedMinutes), isCompleted = VALUES(isCompleted)'
@@ -611,7 +611,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('DELETE FROM `WeeklyPlanItem` WHERE id = :id AND studentId = :studentId');
+        $stmt = $pdo->prepare('DELETE FROM ' . Database::table('WeeklyPlanItem') . ' WHERE id = :id AND studentId = :studentId');
         $stmt->execute(['id' => $id, 'studentId' => $studentId]);
     }
 
@@ -628,7 +628,7 @@ class SyncStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `WeeklyPlanItem` WHERE studentId = :studentId');
+        $stmt = $pdo->prepare('SELECT * FROM ' . Database::table('WeeklyPlanItem') . ' WHERE studentId = :studentId');
         $stmt->execute(['studentId' => $studentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

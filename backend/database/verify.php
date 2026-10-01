@@ -38,61 +38,57 @@ try {
 }
 
 // 10 required domain and sync tables
-$expectedTables = [
-    'User',
-    'Goal',
-    'Roadmap',
-    'Task',
-    'Session',
-    'WeeklyPlan',
-    'WeeklyPlanItem',
-    'SyncMutationRecord',
-    'Tombstone',
-    'TeacherAccessGrant',
-];
+$logicalTables = Database::LOGICAL_TABLES;
+$prefix = Database::getPrefix();
 
-echo "Checking Expected Tables (10 total):\n";
+echo "Checking Expected Tables (10 total, Prefix: '{$prefix}'):\n";
 $stmt = $pdo->query("SHOW TABLES");
 $existingTables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $missingTables = [];
-foreach ($expectedTables as $table) {
-    if (in_array($table, $existingTables, true)) {
-        echo "  ✓ Table '{$table}' exists\n";
+foreach ($logicalTables as $logical) {
+    $physical = Database::rawTable($logical);
+    if (in_array($physical, $existingTables, true)) {
+        echo "  ✓ Physical table '{$physical}' (logical '{$logical}') exists\n";
     } else {
-        echo "  ✗ Table '{$table}' MISSING\n";
-        $missingTables[] = $table;
+        echo "  ✗ Physical table '{$physical}' (logical '{$logical}') MISSING\n";
+        $missingTables[] = $physical;
     }
 }
 
 if (!empty($missingTables)) {
     echo "\n✗ Schema Verification FAILED: Missing " . count($missingTables) . " tables.\n";
-    echo "Please import backend/database/schema.sql using:\n";
-    echo "  mysql -h {$host} -u {$user} -p {$dbname} < backend/database/schema.sql\n";
+    echo "Please initialize the schema using:\n";
+    echo "  php backend/database/init.php\n";
     exit(2);
 }
 
 echo "\nChecking Critical Indexes and Unique Constraints:\n";
 
 // Verify composite unique key on SyncMutationRecord
-$stmt = $pdo->query("SHOW INDEX FROM `SyncMutationRecord` WHERE Key_name = 'SyncMutationRecord_studentId_deviceId_clientMutationId_key'");
+$syncTable = Database::table('SyncMutationRecord');
+$syncKeyName = Database::rawTable('SyncMutationRecord') . '_studentId_deviceId_clientMutationId_key';
+$stmt = $pdo->query("SHOW INDEX FROM {$syncTable} WHERE Key_name IN ('{$syncKeyName}', 'SyncMutationRecord_studentId_deviceId_clientMutationId_key')");
 $indexes = $stmt->fetchAll();
 if (!empty($indexes)) {
-    echo "  ✓ Unique key 'SyncMutationRecord_studentId_deviceId_clientMutationId_key' confirmed\n";
+    echo "  ✓ Unique key '{$syncKeyName}' confirmed on {$syncTable}\n";
 } else {
-    echo "  ✗ Unique key 'SyncMutationRecord_studentId_deviceId_clientMutationId_key' MISSING\n";
+    echo "  ✗ Unique key '{$syncKeyName}' MISSING on {$syncTable}\n";
 }
 
 // Verify sequence unique key on SyncMutationRecord
-$stmt = $pdo->query("SHOW INDEX FROM `SyncMutationRecord` WHERE Key_name = 'SyncMutationRecord_sequence_key'");
+$seqKeyName = Database::rawTable('SyncMutationRecord') . '_sequence_key';
+$stmt = $pdo->query("SHOW INDEX FROM {$syncTable} WHERE Key_name IN ('{$seqKeyName}', 'SyncMutationRecord_sequence_key')");
 if (!empty($stmt->fetchAll())) {
-    echo "  ✓ Unique sequence index on SyncMutationRecord confirmed\n";
+    echo "  ✓ Unique sequence index confirmed on {$syncTable}\n";
 }
 
 // Verify TeacherAccessGrant token uniqueness
-$stmt = $pdo->query("SHOW INDEX FROM `TeacherAccessGrant` WHERE Key_name = 'TeacherAccessGrant_token_key'");
+$teacherTable = Database::table('TeacherAccessGrant');
+$tokenKeyName = Database::rawTable('TeacherAccessGrant') . '_token_key';
+$stmt = $pdo->query("SHOW INDEX FROM {$teacherTable} WHERE Key_name IN ('{$tokenKeyName}', 'TeacherAccessGrant_token_key')");
 if (!empty($stmt->fetchAll())) {
-    echo "  ✓ Unique token index on TeacherAccessGrant confirmed\n";
+    echo "  ✓ Unique token index confirmed on {$teacherTable}\n";
 }
 
 echo "\n✓ All 10 tables and core structural invariants verified successfully.\n";

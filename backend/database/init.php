@@ -61,6 +61,16 @@ if ($sql === false || trim($sql) === '') {
 echo "Executing schema initialization (CREATE TABLE IF NOT EXISTS)...\n";
 
 try {
+    $prefix = Database::getPrefix();
+    if ($prefix !== 'pf_') {
+        // Adapt default pf_ prefix in schema.sql to the custom configured prefix
+        $sql = str_replace(
+            ['`pf_', 'pf_'],
+            ['`' . $prefix, $prefix],
+            $sql
+        );
+    }
+
     // Execute SQL script
     $pdo->exec($sql);
     echo "✓ Schema executed successfully.\n\n";
@@ -69,30 +79,21 @@ try {
     exit(1);
 }
 
-// Now verify all tables
-$expectedTables = [
-    'User',
-    'Goal',
-    'Roadmap',
-    'Task',
-    'Session',
-    'WeeklyPlan',
-    'WeeklyPlanItem',
-    'SyncMutationRecord',
-    'Tombstone',
-    'TeacherAccessGrant',
-];
+// Now verify all tables using physical names
+$logicalTables = Database::LOGICAL_TABLES;
+$prefix = Database::getPrefix();
 
-echo "Verifying Schema Invariants:\n";
+echo "Verifying Schema Invariants (Physical prefix: '{$prefix}'):\n";
 $stmt = $pdo->query("SHOW TABLES");
 $existingTables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $allPresent = true;
-foreach ($expectedTables as $table) {
-    if (in_array($table, $existingTables, true)) {
-        echo "  ✓ Table '{$table}' verified\n";
+foreach ($logicalTables as $logical) {
+    $physical = Database::rawTable($logical);
+    if (in_array($physical, $existingTables, true)) {
+        echo "  ✓ Physical table '{$physical}' (logical '{$logical}') verified\n";
     } else {
-        echo "  ✗ Table '{$table}' MISSING\n";
+        echo "  ✗ Physical table '{$physical}' (logical '{$logical}') MISSING\n";
         $allPresent = false;
     }
 }

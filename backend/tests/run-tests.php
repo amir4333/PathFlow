@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/src/Support/Autoloader.php';
 \PathFlow\Support\Autoloader::register();
 
 use PathFlow\Config\Config;
+use PathFlow\Database\Database;
 use PathFlow\Http\Request;
 use PathFlow\Http\Response;
 use PathFlow\Http\Cors;
@@ -202,7 +203,7 @@ runTest('Health Check: GET /api/health returns status ok with ISO-8601 UTC times
     assertTrue((bool)preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/', $data['timestamp']));
 });
 
-runTest('Schema SQL: Contains all 10 required tables and InnoDB engine', function () {
+runTest('Schema SQL: Contains all 10 required tables with pf_ prefix and InnoDB engine', function () {
     $schemaPath = dirname(__DIR__) . '/database/schema.sql';
     assertTrue(file_exists($schemaPath), 'schema.sql file must exist');
 
@@ -222,10 +223,17 @@ runTest('Schema SQL: Contains all 10 required tables and InnoDB engine', functio
 
     foreach ($requiredTables as $table) {
         assertTrue(
-            str_contains($sql, "CREATE TABLE IF NOT EXISTS `{$table}`") || str_contains($sql, "CREATE TABLE `{$table}`"),
-            "Table {$table} must be defined in schema.sql"
+            str_contains($sql, "CREATE TABLE IF NOT EXISTS `pf_{$table}`") || str_contains($sql, "CREATE TABLE `pf_{$table}`"),
+            "Physical table pf_{$table} must be defined in schema.sql"
         );
     }
+
+    // Verify foreign key references use pf_User
+    assertTrue(str_contains($sql, 'REFERENCES `pf_User`'), 'Foreign keys must reference pf_User');
+    assertTrue(!str_contains($sql, 'REFERENCES `User`'), 'Foreign keys must not reference unprefixed User');
+
+    // Verify zero WordPress tables referenced
+    assertTrue(!str_contains($sql, '5bez_'), 'PathFlow schema must not reference any WordPress 5bez_* table');
 
     assertTrue(str_contains($sql, 'ENGINE=InnoDB'), 'Must use InnoDB engine');
     assertTrue(str_contains($sql, 'utf8mb4'), 'Must use utf8mb4 charset');
@@ -1366,12 +1374,14 @@ runTest('Phase 5: Request extracts REDIRECT_HTTP_X_TEACHER_TOKEN under Apache Fa
     unset($_SERVER['REDIRECT_HTTP_X_TEACHER_TOKEN']);
 });
 
-runTest('Phase 5: Database initialization and schema files exist and are valid', function () {
+runTest('Phase 5: Database initialization and schema files exist and are valid with pf_ prefix', function () {
     $schemaPath = dirname(__DIR__) . '/database/schema.sql';
     assertTrue(file_exists($schemaPath), 'schema.sql must exist');
     $content = file_get_contents($schemaPath);
-    assertTrue(str_contains($content, 'CREATE TABLE IF NOT EXISTS `User`'));
-    assertTrue(str_contains($content, 'CREATE TABLE IF NOT EXISTS `TeacherAccessGrant`'));
+    assertTrue(str_contains($content, 'CREATE TABLE IF NOT EXISTS `pf_User`'));
+    assertTrue(str_contains($content, 'CREATE TABLE IF NOT EXISTS `pf_TeacherAccessGrant`'));
+    assertTrue(str_contains($content, 'REFERENCES `pf_User`'));
+    assertTrue(!str_contains($content, '5bez_'));
     assertTrue(str_contains($content, 'ENGINE=InnoDB'));
 
     $initScript = dirname(__DIR__) . '/database/init.php';
@@ -1391,6 +1401,110 @@ runTest('Phase 5: Apache .htaccess security files exist and protect sensitive da
     assertTrue(file_exists($backendHtaccess), 'backend/.htaccess must exist');
     $backendContent = file_get_contents($backendHtaccess);
     assertTrue(str_contains($backendContent, 'Require all denied') || str_contains($backendContent, 'Deny from all'));
+});
+
+// ========================================================
+// TABLE PREFIX ISOLATION TESTS (WordPress Coexistence)
+// ========================================================
+
+runTest('Table Prefix: Defaults to pf_ and formats table identifier with backticks', function () {
+    Config::set('DB_TABLE_PREFIX', null);
+    assertEquals('pf_', Database::getPrefix());
+    assertEquals('`pf_User`', Database::table('User'));
+    assertEquals('`pf_TeacherAccessGrant`', Database::table('TeacherAccessGrant'));
+    assertEquals('pf_User', Database::rawTable('User'));
+    assertEquals('pf_TeacherAccessGrant', Database::rawTable('TeacherAccessGrant'));
+});
+
+runTest('Table Prefix: Resolves all 10 PathFlow domain tables with configured prefix', function () {
+    Config::set('DB_TABLE_PREFIX', 'pf_');
+    $expected = [
+        'User' => '`pf_User`',
+        'Goal' => '`pf_Goal`',
+        'Roadmap' => '`pf_Roadmap`',
+        'Task' => '`pf_Task`',
+        'Session' => '`pf_Session`',
+        'WeeklyPlan' => '`pf_WeeklyPlan`',
+        'WeeklyPlanItem' => '`pf_WeeklyPlanItem`',
+        'SyncMutationRecord' => '`pf_SyncMutationRecord`',
+        'Tombstone' => '`pf_Tombstone`',
+        'TeacherAccessGrant' => '`pf_TeacherAccessGrant`',
+    ];
+
+    foreach ($expected as $logical => $physicalQuoted) {
+        assertEquals($physicalQuoted, Database::table($logical), "Logical table {$logical} must map to {$physicalQuoted}");
+    }
+});
+
+runTest('Table Prefix: Supports custom prefix configuration', function () {
+    Config::set('DB_TABLE_PREFIX', 'custom_prefix_');
+    assertEquals('custom_prefix_', Database::getPrefix());
+    assertEquals('`custom_prefix_User`', Database::table('User'));
+    assertEquals('`custom_prefix_Task`', Database::table('Task'));
+    assertEquals('custom_prefix_Roadmap', Database::rawTable('Roadmap'));
+
+    // Reset back to pf_
+    Config::set('DB_TABLE_PREFIX', 'pf_');
+});
+
+runTest('Table Prefix: Strictly validates prefix against injection pattern ^[A-Za-z0-9_]*$', function () {
+    $maliciousPrefixes = [
+        "pf_'; DROP TABLE users; --",
+        'pf-test', // dashes not allowed
+        'pf prefix', // spaces not allowed
+        'pf$table',
+    ];
+
+    foreach ($maliciousPrefixes as $badPrefix) {
+        Config::set('DB_TABLE_PREFIX', $badPrefix);
+        $caught = false;
+        try {
+            Database::getPrefix();
+        } catch (\InvalidArgumentException $e) {
+            $caught = true;
+        }
+        assertTrue($caught, "Malicious prefix '{$badPrefix}' must be rejected with InvalidArgumentException");
+    }
+
+    // Reset back to pf_
+    Config::set('DB_TABLE_PREFIX', 'pf_');
+});
+
+runTest('Table Prefix: Strictly rejects untrusted logical table names', function () {
+    $untrustedTables = [
+        '5bez_posts',
+        '5bez_options',
+        '5bez_users',
+        'wp_users',
+        'non_existent_table',
+        'User; DROP TABLE `pf_User`;',
+    ];
+
+    foreach ($untrustedTables as $badTable) {
+        $caught = false;
+        try {
+            Database::table($badTable);
+        } catch (\InvalidArgumentException $e) {
+            $caught = true;
+        }
+        assertTrue($caught, "Untrusted logical table '{$badTable}' must be rejected with InvalidArgumentException");
+    }
+});
+
+runTest('Table Prefix: Database::sql safely replaces trusted {{Table}} placeholders', function () {
+    Config::set('DB_TABLE_PREFIX', 'pf_');
+    $query = 'SELECT u.id FROM {{User}} u JOIN {{Goal}} g ON u.id = g.studentId WHERE u.email = :email';
+    $resolved = Database::sql($query);
+    assertEquals('SELECT u.id FROM `pf_User` u JOIN `pf_Goal` g ON u.id = g.studentId WHERE u.email = :email', $resolved);
+});
+
+runTest('Table Prefix: Complete isolation from WordPress 5bez_* tables', function () {
+    // Verify that PathFlow logical tables and physical tables are disjoint from 5bez_*
+    foreach (Database::LOGICAL_TABLES as $logical) {
+        $physical = Database::rawTable($logical);
+        assertTrue(!str_starts_with($physical, '5bez_'), "Table {$physical} must not use 5bez_ prefix");
+        assertTrue(str_starts_with($physical, 'pf_'), "Table {$physical} must use pf_ prefix");
+    }
 });
 
 echo "\n========================================================\n";

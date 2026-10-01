@@ -88,7 +88,7 @@ class TeacherStore
 
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare(
-            'INSERT INTO `TeacherAccessGrant` (id, studentId, teacherId, label, token, role, permissions, createdAt, expiresAt, revokedAt, isActive)
+            'INSERT INTO ' . Database::table('TeacherAccessGrant') . ' (id, studentId, teacherId, label, token, role, permissions, createdAt, expiresAt, revokedAt, isActive)
              VALUES (:id, :studentId, :teacherId, :label, :token, :role, :permissions, :createdAt, :expiresAt, :revokedAt, :isActive)'
         );
         $stmt->execute([
@@ -121,7 +121,9 @@ class TeacherStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `TeacherAccessGrant` WHERE studentId = :studentId ORDER BY createdAt DESC');
+        $stmt = $pdo->prepare(
+            'SELECT * FROM ' . Database::table('TeacherAccessGrant') . ' WHERE studentId = :studentId ORDER BY createdAt DESC'
+        );
         $stmt->execute(['studentId' => $studentId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -139,7 +141,9 @@ class TeacherStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `TeacherAccessGrant` WHERE id = :id LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT * FROM ' . Database::table('TeacherAccessGrant') . ' WHERE id = :id LIMIT 1'
+        );
         $stmt->execute(['id' => $grantId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -164,7 +168,9 @@ class TeacherStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('SELECT * FROM `TeacherAccessGrant` WHERE token = :token LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT * FROM ' . Database::table('TeacherAccessGrant') . ' WHERE token = :token LIMIT 1'
+        );
         $stmt->execute(['token' => $token]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -189,7 +195,9 @@ class TeacherStore
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare('UPDATE `TeacherAccessGrant` SET isActive = 0, revokedAt = :revokedAt WHERE id = :id');
+        $stmt = $pdo->prepare(
+            'UPDATE ' . Database::table('TeacherAccessGrant') . ' SET isActive = 0, revokedAt = :revokedAt WHERE id = :id'
+        );
         $stmt->execute(['revokedAt' => $revokedAt, 'id' => $grantId]);
 
         return $this->getGrantById($grantId);
