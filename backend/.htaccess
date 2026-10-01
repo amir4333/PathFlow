@@ -1,0 +1,31 @@
+# PathFlow Backend Security Configuration
+# Protects internal PHP classes, database schemas, and environment secrets
+# from unauthorized direct HTTP access.
+
+# Deny access to sensitive files (.env, .sql, .log, .md)
+<FilesMatch "^\.env|(\.sql|\.log|\.md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Deny directory listing
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# If Apache document root is mistakenly pointed to backend/ instead of backend/public/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Deny direct HTTP access to internal code directories
+    RewriteRule ^(src|database|tests)/ - [F,L]
+
+    # Automatically route to public/ if hit directly
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

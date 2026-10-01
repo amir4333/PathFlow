@@ -15,9 +15,16 @@ import {
 } from '../types';
 import { createTimestamp } from '../../domain';
 
+export interface SyncStatusResponse {
+  readonly status: string;
+  readonly studentId?: string;
+  readonly serverTimestamp: string;
+}
+
 export interface RemoteSyncClient {
   push(request: SyncPushRequest): Promise<SyncPushResponse>;
   pull(request: SyncPullRequest): Promise<SyncPullResponse>;
+  getStatus?(): Promise<SyncStatusResponse>;
 }
 
 /**
@@ -29,6 +36,17 @@ export class MockRemoteSyncClient implements RemoteSyncClient {
   private pushedMutations: SyncPushRequest['mutations'] = [];
   public shouldFail: boolean = false;
   public failureMessage: string = 'Network disconnected';
+
+  async getStatus(): Promise<SyncStatusResponse> {
+    if (this.shouldFail) {
+      throw new Error(this.failureMessage);
+    }
+    return {
+      status: 'ok',
+      studentId: 'mock-student-id',
+      serverTimestamp: createTimestamp(),
+    };
+  }
 
   async push(request: SyncPushRequest): Promise<SyncPushResponse> {
     if (this.shouldFail) {

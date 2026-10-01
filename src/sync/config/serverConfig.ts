@@ -25,11 +25,14 @@ export function isValidServerUrl(url: string | null | undefined): boolean {
 }
 
 export function getDefaultServerUrl(): string {
-  // 1. Environment variable injected at build time
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL) {
-    const envUrl = String(import.meta.env.VITE_BACKEND_URL).trim().replace(/\/+$/, '');
-    if (isValidServerUrl(envUrl)) {
-      return envUrl;
+  // 1. Environment variable injected at build time (supports VITE_API_BASE_URL and VITE_BACKEND_URL)
+  if (typeof import.meta !== 'undefined') {
+    const envUrl = import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL;
+    if (envUrl) {
+      const clean = String(envUrl).trim().replace(/\/+$/, '');
+      if (isValidServerUrl(clean)) {
+        return clean;
+      }
     }
   }
 

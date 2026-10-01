@@ -17,7 +17,7 @@ class Cors
      */
     public static function resolveAllowedOrigin(?string $requestOrigin): string
     {
-        $configured = Config::get('CORS_ORIGIN', '*');
+        $configured = Config::get('CORS_ORIGIN') ?? Config::get('CORS_ALLOWED_ORIGINS', '*');
 
         if ($configured === '*' || empty($configured)) {
             return $requestOrigin ?? '*';

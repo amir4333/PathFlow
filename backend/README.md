@@ -70,6 +70,9 @@ backend/
 2. **Create MySQL Database & Import Schema**:
    ```bash
    mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS pathflow_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   # You can initialize the database using the safe PHP initializer:
+   php backend/database/init.php
+   # Or directly via MySQL CLI:
    mysql -u root -p pathflow_db < backend/database/schema.sql
    ```
 

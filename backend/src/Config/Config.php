@@ -23,12 +23,23 @@ class Config
         }
 
         $filePath = $envFilePath ?? dirname(__DIR__, 2) . '/.env';
+        if (!file_exists($filePath)) {
+            $rootEnv = dirname(__DIR__, 3) . '/.env';
+            if (file_exists($rootEnv)) {
+                $filePath = $rootEnv;
+            }
+        }
+
         if (file_exists($filePath) && is_readable($filePath)) {
             $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             foreach ($lines as $line) {
                 $line = trim($line);
                 if ($line === '' || str_starts_with($line, '#')) {
                     continue;
+                }
+                // Strip leading export if present
+                if (str_starts_with($line, 'export ')) {
+                    $line = trim(substr($line, 7));
                 }
                 if (str_contains($line, '=')) {
                     [$key, $value] = explode('=', $line, 2);

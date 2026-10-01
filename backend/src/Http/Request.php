@@ -70,6 +70,21 @@ class Request
             }
         }
 
+        // Support Apache X-Teacher-Token workaround if redirected or under FastCGI
+        if (!isset($headers['x-teacher-token'])) {
+            if (isset($_SERVER['REDIRECT_HTTP_X_TEACHER_TOKEN'])) {
+                $headers['x-teacher-token'] = $_SERVER['REDIRECT_HTTP_X_TEACHER_TOKEN'];
+            } elseif (function_exists('apache_request_headers')) {
+                $apacheHeaders = apache_request_headers();
+                foreach ($apacheHeaders as $k => $v) {
+                    if (strcasecmp($k, 'X-Teacher-Token') === 0) {
+                        $headers['x-teacher-token'] = $v;
+                        break;
+                    }
+                }
+            }
+        }
+
         // Parse JSON body if present
         $rawInput = file_get_contents('php://input');
         $body = null;

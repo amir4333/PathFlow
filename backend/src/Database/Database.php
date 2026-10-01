@@ -32,14 +32,20 @@ class Database
         $username = $customOptions['username'] ?? Config::get('DB_USERNAME', 'root');
         $password = $customOptions['password'] ?? Config::get('DB_PASSWORD', '');
         $charset = $customOptions['charset'] ?? Config::get('DB_CHARSET', 'utf8mb4');
+        $collation = $customOptions['collation'] ?? Config::get('DB_COLLATION', 'utf8mb4_unicode_ci');
+        $socket = $customOptions['socket'] ?? Config::get('DB_SOCKET', '');
 
-        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $host, $port, $database, $charset);
+        if (!empty($socket)) {
+            $dsn = sprintf('mysql:unix_socket=%s;dbname=%s;charset=%s', $socket, $database, $charset);
+        } else {
+            $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $host, $port, $database, $charset);
+        }
 
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => sprintf('SET NAMES %s COLLATE %s_unicode_ci', $charset, $charset),
+            PDO::MYSQL_ATTR_INIT_COMMAND => sprintf('SET NAMES %s COLLATE %s', $charset, $collation),
         ];
 
         try {

@@ -7,6 +7,7 @@
 
 import {
   RemoteSyncClient,
+  SyncStatusResponse,
 } from './remoteSyncClient';
 import {
   SyncPushRequest,
@@ -111,6 +112,47 @@ export class HttpRemoteSyncClient implements RemoteSyncClient {
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new Error(`Sync pull timed out after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async getStatus(): Promise<SyncStatusResponse> {
+    const token = await this.getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required for sync status');
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/sync/status`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        let errDetails = `HTTP ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error) errDetails = errJson.error;
+        } catch {
+          // ignore json parse error
+        }
+        throw new Error(`Sync status failed: ${errDetails}`);
+      }
+
+      const data = await response.json();
+      return data as SyncStatusResponse;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Sync status timed out after ${this.timeoutMs}ms`);
       }
       throw err;
     } finally {

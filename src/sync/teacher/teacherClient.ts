@@ -37,7 +37,8 @@ export class TeacherHttpClient {
       throw new Error(`Failed to list teacher grants (HTTP ${response.status}): ${err}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.grants ?? []);
   }
 
   async createGrant(
@@ -64,7 +65,8 @@ export class TeacherHttpClient {
       throw new Error(`Failed to create teacher grant: ${err}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    return (data.grant ?? data) as TeacherAccessGrant;
   }
 
   async revokeGrant(studentAuthToken: string, grantId: string): Promise<TeacherAccessGrant> {
@@ -86,37 +88,50 @@ export class TeacherHttpClient {
       throw new Error(`Failed to revoke teacher grant: ${err}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    return (data.grant ?? data) as TeacherAccessGrant;
   }
 
   // --- Teacher-Side Read-Only Queries ---
 
   async getStudentGoals(studentId: string, grantToken: string): Promise<any[]> {
-    return this.queryReadOnly(studentId, 'goals', grantToken);
+    const data = await this.queryReadOnly(studentId, 'goals', grantToken);
+    return Array.isArray(data) ? data : (data.goals ?? []);
   }
 
   async getStudentRoadmaps(studentId: string, grantToken: string): Promise<any[]> {
-    return this.queryReadOnly(studentId, 'roadmaps', grantToken);
+    const data = await this.queryReadOnly(studentId, 'roadmaps', grantToken);
+    return Array.isArray(data) ? data : (data.roadmaps ?? []);
   }
 
   async getStudentTasks(studentId: string, grantToken: string): Promise<any[]> {
-    return this.queryReadOnly(studentId, 'tasks', grantToken);
+    const data = await this.queryReadOnly(studentId, 'tasks', grantToken);
+    return Array.isArray(data) ? data : (data.tasks ?? []);
   }
 
-  async getStudentSessions(studentId: string, grantToken: string): Promise<any[]> {
-    return this.queryReadOnly(studentId, 'sessions', grantToken);
+  async getStudentSessions(studentId: string, grantToken: string, startDate?: string, endDate?: string): Promise<any[]> {
+    let resource = 'sessions';
+    const q: string[] = [];
+    if (startDate) q.push(`startDate=${encodeURIComponent(startDate)}`);
+    if (endDate) q.push(`endDate=${encodeURIComponent(endDate)}`);
+    if (q.length > 0) resource += `?${q.join('&')}`;
+    const data = await this.queryReadOnly(studentId, resource, grantToken);
+    return Array.isArray(data) ? data : (data.sessions ?? []);
   }
 
   async getStudentWeeklyPlans(studentId: string, grantToken: string): Promise<any[]> {
-    return this.queryReadOnly(studentId, 'weekly-plans', grantToken);
+    const data = await this.queryReadOnly(studentId, 'weekly-plans', grantToken);
+    return Array.isArray(data) ? data : (data.weeklyPlans ?? []);
   }
 
   async getStudentProgress(studentId: string, grantToken: string): Promise<any> {
-    return this.queryReadOnly(studentId, 'progress', grantToken);
+    const data = await this.queryReadOnly(studentId, 'progress', grantToken);
+    return data.progress ?? data;
   }
 
   async getStudentReports(studentId: string, grantToken: string): Promise<any> {
-    return this.queryReadOnly(studentId, 'reports', grantToken);
+    const data = await this.queryReadOnly(studentId, 'reports', grantToken);
+    return data.reports ?? data;
   }
 
   private async queryReadOnly(
@@ -128,6 +143,7 @@ export class TeacherHttpClient {
       `${this.baseUrl}/api/teacher/students/${studentId}/${resource}`,
       {
         headers: {
+          'X-Teacher-Token': grantToken,
           Authorization: `Bearer ${grantToken}`,
         },
       }

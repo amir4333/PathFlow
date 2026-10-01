@@ -17,7 +17,7 @@ import {
   SyncEntityChange,
   SyncTombstone,
 } from '../types';
-import { createTimestamp, Goal, Roadmap, Task, Session, WeeklyPlanItem } from '../../domain';
+import { createTimestamp, Goal, Roadmap, Task, Session, WeeklyPlan, WeeklyPlanItem } from '../../domain';
 
 export interface SyncEngineOptions {
   readonly deviceId: string;
@@ -223,23 +223,30 @@ export class SyncEngine {
       }
 
       // 2. Pull Phase: Fetch remote changes since current cursor
-      const pullResponse = await this.remoteClient.pull({
-        cursor: this.cursor,
-      });
+      let hasMore = true;
+      let pullCycles = 0;
+      while (hasMore && pullCycles < 10) {
+        pullCycles++;
+        const pullResponse = await this.remoteClient.pull({
+          cursor: this.cursor,
+        });
 
-      // Apply incoming changes
-      for (const change of pullResponse.changes) {
-        await this.applyIncomingChange(change);
-        pulledCount++;
+        // Apply incoming changes
+        for (const change of pullResponse.changes) {
+          await this.applyIncomingChange(change);
+          pulledCount++;
+        }
+
+        // Apply incoming tombstones
+        for (const tombstone of pullResponse.tombstones) {
+          await this.applyIncomingTombstone(tombstone);
+          pulledCount++;
+        }
+
+        this.cursor = pullResponse.nextCursor;
+        hasMore = pullResponse.hasMore;
       }
 
-      // Apply incoming tombstones
-      for (const tombstone of pullResponse.tombstones) {
-        await this.applyIncomingTombstone(tombstone);
-        pulledCount++;
-      }
-
-      this.cursor = pullResponse.nextCursor;
       this.lastSyncedAt = createTimestamp();
       this.state = 'idle';
     } catch (err: any) {
@@ -304,6 +311,18 @@ export class SyncEngine {
         }
         break;
       }
+      case 'weeklyPlan': {
+        const local = await this.repositories.weeklyPlans.getById(entityId);
+        const resolution = this.conflictResolver.resolveEntityConflict('weeklyPlan', local, payload as WeeklyPlan);
+        if (resolution.action === 'apply_remote' || resolution.action === 'merge') {
+          if (local) {
+            await this.repositories.weeklyPlans.update(resolution.entity);
+          } else {
+            await this.repositories.weeklyPlans.create(resolution.entity);
+          }
+        }
+        break;
+      }
       case 'weeklyPlanItem': {
         const local = await this.repositories.weeklyPlanItems.getById(entityId);
         const resolution = this.conflictResolver.resolveEntityConflict('weeklyPlanItem', local, payload as WeeklyPlanItem);
@@ -352,6 +371,14 @@ export class SyncEngine {
         const result = this.conflictResolver.resolveTombstoneConflict(local, tombstone);
         if (result === 'tombstone_wins' && local) {
           await this.repositories.sessions.delete(entityId);
+        }
+        break;
+      }
+      case 'weeklyPlan': {
+        const local = await this.repositories.weeklyPlans.getById(entityId);
+        const result = this.conflictResolver.resolveTombstoneConflict(local, tombstone);
+        if (result === 'tombstone_wins' && local) {
+          await this.repositories.weeklyPlans.delete(entityId);
         }
         break;
       }

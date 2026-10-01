@@ -1,0 +1,5 @@
+# PathFlow backend ignore rules
+.env
+.env.local
+.env.*.local
+*.log
