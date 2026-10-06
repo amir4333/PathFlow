@@ -1,7 +1,7 @@
 import React from 'react';
 import { Target, CheckCircle2, Clock } from 'lucide-react';
 import { ReportGoalItem } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 
 export interface ReportGoalsSectionProps {
   readonly goals: readonly ReportGoalItem[];
@@ -63,7 +63,7 @@ export const ReportGoalsSection: React.FC<ReportGoalsSectionProps> = ({ goals })
                   </td>
                   <td className="py-2.5 px-3">
                     <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
-                      {g.status}
+                      {translateStatus(g.status, preferences.language)}
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center font-mono">

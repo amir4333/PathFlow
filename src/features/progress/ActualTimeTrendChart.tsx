@@ -92,7 +92,7 @@ export const ActualTimeTrendChart: React.FC<ActualTimeTrendChartProps> = ({
         <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 self-start sm:self-auto">
           <Clock className="w-3.5 h-3.5 text-neutral-400" />
           <span>
-            {formatDurationHoursMinutes(averageMinutesPerDay)} / day
+            {formatDurationHoursMinutes(averageMinutesPerDay)} {t('perDay')}
           </span>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { Task, Session } from '../../domain';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useActiveSession } from './ActiveSessionContext';
-import { useUserPreferences } from '../../app/preferences';
+import { useUserPreferences, getTranslation } from '../../app/preferences';
 import {
   Play,
   Square,
@@ -28,7 +28,8 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
 }) => {
   const application = useApplication();
   const { navigate } = useRouter();
-  const { formatTime, formatDate } = useUserPreferences();
+  const { formatTime, formatDate, formatNumeral, preferences } = useUserPreferences();
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, preferences.language);
   const {
     activeSession,
     activeTask,
@@ -101,7 +102,11 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
     try {
       const completed = await completeSession();
       const mins = completed.durationMinutes;
-      setActionMessage(`Session completed! Recorded ${mins} minute${mins === 1 ? '' : 's'}.`);
+      setActionMessage(
+        `${t('sessionCompletedMsgPrefix')} ${formatNumeral(mins)} ${
+          mins === 1 ? t('minuteSingular') : t('minutesPlural')
+        }.`
+      );
       if (onSessionCompleted) {
         onSessionCompleted(completed);
       }
@@ -119,7 +124,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
     try {
       await discardSession();
       setIsDiscardConfirmOpen(false);
-      setActionMessage('Active session was discarded.');
+      setActionMessage(t('activeSessionDiscardedMsg'));
     } catch (err) {
       console.error('Failed to discard session', err);
     } finally {
@@ -136,7 +141,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <div className="truncate">
               <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100 truncate block">
-                {activeTask?.title || 'Active Session'}
+                {activeTask?.title || t('activeSessionFallback')}
               </span>
               <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
                 {formattedTime}
@@ -148,7 +153,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             disabled={isSubmitting}
             className="px-2.5 py-1 text-xs font-medium rounded bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition shrink-0"
           >
-            Complete
+            {t('completeShort')}
           </button>
         </div>
       );
@@ -175,23 +180,23 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Active Focus Session
+                {t('activeFocusSession')}
               </span>
               <span className="text-xs text-neutral-500 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                <span>Started: {dateFormatted} • {timeFormatted}</span>
+                <span>{t('startedColon')} {dateFormatted} • {timeFormatted}</span>
               </span>
             </div>
 
             <div className="flex items-baseline gap-2">
               <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
-                {activeTask ? activeTask.title : 'Loading task details...'}
+                {activeTask ? activeTask.title : t('loadingTaskDetails')}
               </h3>
               {activeTask && (
                 <button
                   onClick={() => navigate('tasks', { id: activeTask.id })}
                   className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 inline-flex items-center gap-1 cursor-pointer transition"
-                  title="View Task Details"
+                  title={t('viewTaskDetails')}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
@@ -209,7 +214,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 self-start md:self-center">
             <div className="text-left sm:text-right">
               <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-semibold">
-                Elapsed Focus Time
+                {t('elapsedFocusTime')}
               </div>
               <div
                 id="active-timer-display"
@@ -227,7 +232,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
                 className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium text-sm flex items-center gap-2 shadow-xs cursor-pointer transition disabled:opacity-50"
               >
                 <Square className="w-4 h-4 fill-current" />
-                <span>{isSubmitting ? 'Stopping...' : 'Stop & Save'}</span>
+                <span>{isSubmitting ? t('stopping') : t('stopAndSave')}</span>
               </button>
 
               {!isDiscardConfirmOpen ? (
@@ -236,27 +241,27 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
                   onClick={() => setIsDiscardConfirmOpen(true)}
                   disabled={isSubmitting}
                   className="p-2.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition"
-                  title="Discard session without saving"
+                  title={t('discardWithoutSavingTooltip')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               ) : (
                 <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-950/60 p-1 rounded-lg border border-rose-200 dark:border-rose-900">
                   <span className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 px-1">
-                    Discard?
+                    {t('discardConfirmQuestion')}
                   </span>
                   <button
                     onClick={handleDiscard}
                     disabled={isSubmitting}
                     className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded cursor-pointer"
                   >
-                    Yes
+                    {t('yes')}
                   </button>
                   <button
                     onClick={() => setIsDiscardConfirmOpen(false)}
                     className="px-2 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs rounded cursor-pointer"
                   >
-                    No
+                    {t('no')}
                   </button>
                 </div>
               )}
@@ -284,14 +289,14 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
         <div>
           <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <Clock className="w-4 h-4 text-neutral-500" />
-            <span>Start Work Session</span>
+            <span>{t('startWorkSession')}</span>
           </h3>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Select an actionable task from your roadmaps to start deep work tracking.
+            {t('startWorkSessionDesc')}
           </p>
         </div>
         <div className="text-xs text-neutral-400 font-mono">
-          Timer counts upward offline
+          {t('timerCountsUpwardOffline')}
         </div>
       </div>
 
@@ -305,7 +310,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             onClick={() => setActionMessage(null)}
             className="text-xs text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
           >
-            Dismiss
+            {t('dismiss')}
           </button>
         </div>
       )}
@@ -320,7 +325,7 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             onClick={clearError}
             className="text-xs text-rose-700 dark:text-rose-300 underline cursor-pointer"
           >
-            Dismiss
+            {t('dismiss')}
           </button>
         </div>
       )}
@@ -329,16 +334,16 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
         <div className="p-6 text-center rounded-lg bg-neutral-50 dark:bg-neutral-950/50 border border-dashed border-neutral-200 dark:border-neutral-800 space-y-2">
           <CheckSquare className="w-8 h-8 text-neutral-400 mx-auto" />
           <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            No actionable tasks available
+            {t('noActionableTasksAvailable')}
           </p>
           <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-            Create tasks under your milestone roadmaps first to start timing focused work sessions.
+            {t('noActionableTasksDesc')}
           </p>
           <button
             onClick={() => navigate('tasks')}
             className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-medium cursor-pointer"
           >
-            Go to Tasks
+            {t('goToTasks')}
           </button>
         </div>
       ) : (
@@ -348,9 +353,9 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
               htmlFor="session-task-select"
               className="text-xs font-medium text-neutral-700 dark:text-neutral-300 flex items-center justify-between"
             >
-              <span>Target Task</span>
+              <span>{t('targetTask')}</span>
               <span className="text-[11px] text-neutral-400">
-                {availableTasks.length} available
+                {formatNumeral(availableTasks.length)} {t('availableLower')}
               </span>
             </label>
             <select
@@ -359,9 +364,9 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
               onChange={(e) => setSelectedTaskId(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white"
             >
-              {availableTasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title} {t.status === 'in_progress' ? ' [In Progress]' : ''} ({t.estimatedMinutes}m est)
+              {availableTasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title} {task.status === 'in_progress' ? ` [${t('statusInProgress')}]` : ''} ({formatNumeral(task.estimatedMinutes)}{preferences.language === 'fa' ? ' دقیقه ' : 'm '}{t('estShort')})
                 </option>
               ))}
             </select>
@@ -374,10 +379,11 @@ export const ActiveSessionTimer: React.FC<ActiveSessionTimerProps> = ({
             className="px-5 py-2 text-sm font-medium rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 flex items-center justify-center gap-2 cursor-pointer transition disabled:opacity-50 h-[38px] shrink-0"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>{isSubmitting ? 'Starting...' : 'Start Session'}</span>
+            <span>{isSubmitting ? t('starting') : t('startSession')}</span>
           </button>
         </div>
       )}
     </div>
   );
 };
+

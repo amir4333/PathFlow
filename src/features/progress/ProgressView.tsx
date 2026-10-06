@@ -138,8 +138,8 @@ export const ProgressView: React.FC = () => {
           <button
             type="button"
             onClick={loadProgressData}
-            title="Refresh"
-            aria-label="Refresh"
+            title={t('refresh')}
+            aria-label={t('refresh')}
             className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -222,7 +222,7 @@ export const ProgressView: React.FC = () => {
             onClick={loadProgressData}
             className="ml-auto underline hover:no-underline text-xs font-semibold"
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}

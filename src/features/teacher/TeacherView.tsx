@@ -193,7 +193,7 @@ export const TeacherView: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="font-semibold text-sm">{t('readOnlyNotice')}</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-200/70 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200">
-                Observational
+                {t('observationalBadge')}
               </span>
             </div>
             <p className="text-xs text-emerald-700/90 dark:text-emerald-300/80 mt-0.5">
@@ -355,7 +355,7 @@ export const TeacherView: React.FC = () => {
             onClick={loadTeacherData}
             className="ml-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useApplication } from '../../app/providers/ApplicationProvider';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 import { OfficialProgressReport, Goal, Roadmap, ReportScopeType } from '../../domain';
 import { ReportMetadataHeader } from './ReportMetadataHeader';
 import { ReportOverviewSection } from './ReportOverviewSection';
@@ -304,7 +304,7 @@ export const ReportsView: React.FC = () => {
                 >
                   {availableGoals.map((g) => (
                     <option key={g.id} value={g.id}>
-                      {g.title} ({g.status})
+                      {g.title} ({translateStatus(g.status, preferences.language)})
                     </option>
                   ))}
                 </select>
@@ -344,6 +344,13 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-800 dark:text-rose-300 flex items-center gap-3 text-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div>{error}</div>
+          <button
+            type="button"
+            onClick={generateReport}
+            className="ml-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
+          >
+            {t('retry')}
+          </button>
         </div>
       )}
 

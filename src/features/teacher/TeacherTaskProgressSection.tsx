@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CheckSquare, Compass, Clock, CalendarClock, Activity, Filter } from 'lucide-react';
 import { TaskPeriodActivity } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 
 export interface TeacherTaskProgressSectionProps {
   readonly tasks: readonly TaskPeriodActivity[];
@@ -153,7 +153,7 @@ export const TeacherTaskProgressSection: React.FC<TeacherTaskProgressSectionProp
                           : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
                       }`}
                     >
-                      {task.status}
+                      {translateStatus(task.status, preferences.language)}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right font-mono text-neutral-600 dark:text-neutral-400">

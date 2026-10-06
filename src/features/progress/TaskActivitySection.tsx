@@ -1,7 +1,7 @@
 import React from 'react';
 import { ListTodo, Clock, CalendarClock, Compass } from 'lucide-react';
 import { TaskPeriodActivity } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 
 export interface TaskActivitySectionProps {
   readonly tasks: readonly TaskPeriodActivity[];
@@ -57,7 +57,7 @@ export const TaskActivitySection: React.FC<TaskActivitySectionProps> = ({ tasks 
                     </span>
                   </div>
                   <div className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center space-x-2 mt-0.5">
-                    <span>{t('status')}: {task.status}</span>
+                    <span>{t('status')}: {translateStatus(task.status, preferences.language)}</span>
                     {task.sessionCount > 0 && (
                       <>
                         <span>•</span>

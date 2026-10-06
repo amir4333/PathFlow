@@ -212,3 +212,15 @@ export function formatDurationHoursMinutes(
   return `${minutes}m`;
 }
 
+export function formatShortDate(
+  timestamp: string | Date | number,
+  preferences: UserPreferences = DEFAULT_PREFERENCES
+): string {
+  return formatDate(timestamp, preferences, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+

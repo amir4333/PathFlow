@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useApplication } from '../../app/providers/ApplicationProvider';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 import {
   Goal,
   Roadmap,
@@ -160,8 +160,8 @@ export const TeacherGoalDetailView: React.FC<TeacherGoalDetailViewProps> = ({ go
             type: 'task_completed',
             timestamp: t.completedAt,
             title: t.title,
-            subtitle: r ? `Roadmap: ${r.title}` : undefined,
-            badge: 'Task Completed',
+            subtitle: r ? `${getTranslation('roadmap', preferences.language)}: ${r.title}` : undefined,
+            badge: getTranslation('taskCompletedEvent', preferences.language),
           });
         }
       }
@@ -174,9 +174,9 @@ export const TeacherGoalDetailView: React.FC<TeacherGoalDetailViewProps> = ({ go
           id: `session-${s.id}`,
           type: 'session_recorded',
           timestamp: s.startedAt,
-          title: t?.title ?? `Task #${s.taskId.slice(0, 8)}`,
-          subtitle: r ? `Roadmap: ${r.title}` : undefined,
-          badge: 'Session',
+          title: t?.title ?? `${getTranslation('task', preferences.language)} #${s.taskId.slice(0, 8)}`,
+          subtitle: r ? `${getTranslation('roadmap', preferences.language)}: ${r.title}` : undefined,
+          badge: getTranslation('session', preferences.language),
           durationMinutes: s.durationMinutes,
           notes: (s as any).notes,
         });
@@ -287,7 +287,7 @@ export const TeacherGoalDetailView: React.FC<TeacherGoalDetailViewProps> = ({ go
                     {goal.title}
                   </h1>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium">
-                    {goal.status}
+                    {translateStatus(goal.status, preferences.language)}
                   </span>
                 </div>
                 <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -334,7 +334,7 @@ export const TeacherGoalDetailView: React.FC<TeacherGoalDetailViewProps> = ({ go
             onClick={loadData}
             className="ml-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}

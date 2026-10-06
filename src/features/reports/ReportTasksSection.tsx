@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckSquare } from 'lucide-react';
 import { ReportTaskItem } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus, translatePriority } from '../../app/preferences';
 
 export interface ReportTasksSectionProps {
   readonly tasks: readonly ReportTaskItem[];
@@ -56,7 +56,7 @@ export const ReportTasksSection: React.FC<ReportTasksSectionProps> = ({ tasks })
                       <span>{task.title}</span>
                       {task.priority && (
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-                          {task.priority}
+                          {translatePriority(task.priority, preferences.language)}
                         </span>
                       )}
                     </div>
@@ -74,7 +74,7 @@ export const ReportTasksSection: React.FC<ReportTasksSectionProps> = ({ tasks })
                           : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
                       }`}
                     >
-                      {task.status}
+                      {translateStatus(task.status, preferences.language)}
                     </span>
                   </td>
                   <td className="py-2.5 px-3 bg-neutral-200/30 dark:bg-neutral-800/30 text-right font-mono text-neutral-700 dark:text-neutral-300">

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Task, Roadmap, Session } from '../../domain';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useActiveSession } from './ActiveSessionContext';
-import { useUserPreferences } from '../../app/preferences';
+import { useUserPreferences, getTranslation } from '../../app/preferences';
 import {
   X,
   Clock,
@@ -40,7 +40,8 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
 }) => {
   const application = useApplication();
   const { activeSession, activeTask } = useActiveSession();
-  const { formatDate, formatTime, preferences } = useUserPreferences();
+  const { formatDate, formatTime, formatNumeral, preferences } = useUserPreferences();
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, preferences.language);
 
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
   const [roadmapsMap, setRoadmapsMap] = useState<Record<string, Roadmap>>({});
@@ -124,15 +125,20 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
     const endMs = new Date(endTimeLocal).getTime();
 
     if (isNaN(startMs) || isNaN(endMs)) {
-      return { minutes: 0, formatted: '--', isValid: false, errorReason: 'Invalid date/time' };
+      return {
+        minutes: 0,
+        formatted: '--',
+        isValid: false,
+        errorReason: getTranslation('errInvalidDateTime', preferences.language),
+      };
     }
 
     if (endMs <= startMs) {
       return {
         minutes: 0,
-        formatted: '0 min',
+        formatted: `0 ${getTranslation('minShort', preferences.language)}`,
         isValid: false,
-        errorReason: 'End time must be after start time',
+        errorReason: getTranslation('errEndAfterStart', preferences.language),
       };
     }
 
@@ -140,9 +146,9 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
     if (startMs > nowMs + 60000) {
       return {
         minutes: 0,
-        formatted: '0 min',
+        formatted: `0 ${getTranslation('minShort', preferences.language)}`,
         isValid: false,
-        errorReason: 'Session cannot start in the future',
+        errorReason: getTranslation('errStartInFuture', preferences.language),
       };
     }
 
@@ -150,21 +156,21 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
     if (totalMinutes === 0) {
       return {
         minutes: 0,
-        formatted: '0 min',
+        formatted: `0 ${getTranslation('minShort', preferences.language)}`,
         isValid: false,
-        errorReason: 'Duration must be at least 1 minute',
+        errorReason: getTranslation('errDurationMinOne', preferences.language),
       };
     }
 
     const hours = Math.floor(totalMinutes / 60);
     const remainingMins = totalMinutes % 60;
-    let formatted = `${totalMinutes} min`;
+    let formatted = `${formatNumeral(totalMinutes)} ${getTranslation('minShort', preferences.language)}`;
     if (hours > 0) {
-      formatted += ` (${hours}h ${remainingMins}m)`;
+      formatted += ` (${formatNumeral(hours)}h ${formatNumeral(remainingMins)}m)`;
     }
 
     return { minutes: totalMinutes, formatted, isValid: true };
-  }, [startTimeLocal, endTimeLocal]);
+  }, [startTimeLocal, endTimeLocal, preferences.language, formatNumeral]);
 
   if (!isOpen) return null;
 
@@ -180,12 +186,12 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
     }
 
     if (!selectedTaskId) {
-      setError('Please select a task.');
+      setError(t('errSelectTask'));
       return;
     }
 
     if (!derivedDuration.isValid) {
-      setError(derivedDuration.errorReason || 'Please enter valid start and end times.');
+      setError(derivedDuration.errorReason || t('errValidStartEnd'));
       return;
     }
 
@@ -203,7 +209,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
       onSessionCreated(created);
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to record manual session.';
+      const msg = err instanceof Error ? err.message : t('errRecordManualSession');
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -227,10 +233,10 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
             <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <div>
               <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                Record Completed Session
+                {t('recordCompletedSession')}
               </h2>
               <p className="text-xs text-neutral-500">
-                Log a past work block executed offline without the active timer.
+                {t('recordCompletedSessionDesc')}
               </p>
             </div>
           </div>
@@ -252,13 +258,13 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
             >
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold block">Live Timer in Progress</span>
+                <span className="font-semibold block">{t('liveTimerInProgress')}</span>
                 <span>
-                  An active session is currently running for{' '}
+                  {t('liveTimerConflictDesc1')}{' '}
                   <strong className="font-medium text-amber-900 dark:text-amber-200">
                     {activeTask?.title || activeSession.taskId}
                   </strong>
-                  . To prevent state collisions, please stop or discard the running timer before logging a manual session.
+                  {t('liveTimerConflictDesc2')}
                 </span>
               </div>
             </div>
@@ -280,13 +286,13 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
               htmlFor="manual-session-task-select"
               className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1"
             >
-              Target Task <span className="text-rose-500">*</span>
+              {t('targetTask')} <span className="text-rose-500">*</span>
             </label>
             {isLoadingData ? (
-              <div className="text-xs text-neutral-400 py-2">Loading tasks...</div>
+              <div className="text-xs text-neutral-400 py-2">{t('loadingTasks')}</div>
             ) : availableTasks.length === 0 ? (
               <div className="text-xs text-neutral-500 py-2 italic">
-                No tasks available. Create a task in Roadmaps or Tasks first.
+                {t('noTasksAvailableManual')}
               </div>
             ) : (
               <select
@@ -301,7 +307,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
                     <option key={task.id} value={task.id}>
                       {task.title}
                       {roadmap ? ` (${roadmap.title})` : ''}
-                      {task.status === 'completed' ? ' [Completed]' : ''}
+                      {task.status === 'completed' ? ` [${t('statusCompleted')}]` : ''}
                     </option>
                   );
                 })}
@@ -316,7 +322,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
                 htmlFor="manual-session-start-time"
                 className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                Start Time <span className="text-rose-500">*</span>
+                {t('startTimeLabel')} <span className="text-rose-500">*</span>
               </label>
               <input
                 id="manual-session-start-time"
@@ -332,7 +338,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
                 htmlFor="manual-session-end-time"
                 className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1"
               >
-                End Time <span className="text-rose-500">*</span>
+                {t('endTimeLabel')} <span className="text-rose-500">*</span>
               </label>
               <input
                 id="manual-session-end-time"
@@ -348,7 +354,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
           {startTimeLocal && (
             <div className="text-[11px] text-neutral-500 bg-neutral-50 dark:bg-neutral-800/40 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
               <span className="font-medium text-neutral-600 dark:text-neutral-400">
-                Display Preview ({preferences.calendar}):
+                {t('displayPreview')} ({preferences.calendar === 'persian' ? t('persianCalendar') : t('gregorianCalendar')}):
               </span>
               <span className="font-mono font-semibold text-neutral-800 dark:text-neutral-200">
                 {formatDate(startTimeLocal, { dateStyle: 'medium' })} • {formatTime(startTimeLocal)}
@@ -361,7 +367,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-neutral-500" />
               <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
-                Derived Duration:
+                {t('derivedDurationLabel')}
               </span>
             </div>
             <div>
@@ -374,7 +380,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
                 </span>
               ) : (
                 <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                  {derivedDuration.errorReason || 'Enter valid time range'}
+                  {derivedDuration.errorReason || t('enterValidTimeRange')}
                 </span>
               )}
             </div>
@@ -388,7 +394,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-xs font-medium rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -402,7 +408,7 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
               className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>{isSubmitting ? 'Recording...' : 'Record Session'}</span>
+              <span>{isSubmitting ? t('recording') : t('recordSessionBtn')}</span>
             </button>
           </div>
         </form>
@@ -410,3 +416,4 @@ export const ManualSessionModal: React.FC<ManualSessionModalProps> = ({
     </div>
   );
 };
+

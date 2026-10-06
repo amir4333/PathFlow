@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Target, MapPin, CheckCircle2, Clock, ChevronDown, ChevronRight, Layers, BarChart2, ExternalLink } from 'lucide-react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { GoalPeriodProgress, RoadmapPeriodProgress } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 
 export interface TeacherGoalRoadmapSectionProps {
   readonly goals: readonly GoalPeriodProgress[];
@@ -118,7 +118,7 @@ export const TeacherGoalRoadmapSection: React.FC<TeacherGoalRoadmapSectionProps>
                           {goal.title}
                         </span>
                         <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-medium">
-                          {goal.status}
+                          {translateStatus(goal.status, preferences.language)}
                         </span>
                       </div>
                       <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center space-x-3 mt-1 flex-wrap">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Task, TaskPriority, TaskStatus } from '../../domain';
+import { useUserPreferences, getTranslation, translateStatus, translatePriority } from '../../app/preferences';
 import { TaskCard } from './TaskCard';
 import { TaskFormModal } from './TaskFormModal';
 import { Plus, CheckSquare, Filter, AlertCircle } from 'lucide-react';
@@ -31,10 +32,8 @@ interface TaskListProps {
 }
 
 export const TaskList: React.FC<TaskListProps> = ({
-  roadmapId,
   roadmapTitle,
   tasks,
-  onRefresh,
   onSelectTask,
   onStatusChange,
   onUpdateTask,
@@ -42,6 +41,9 @@ export const TaskList: React.FC<TaskListProps> = ({
   onDeleteTask,
   errorMessage,
 }) => {
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang);
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
 
@@ -103,13 +105,13 @@ export const TaskList: React.FC<TaskListProps> = ({
         <div>
           <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <span>Milestone Action Units & Tasks</span>
+            <span>{t('milestoneActionUnitsTitle')}</span>
             <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
               {tasks.length}
             </span>
           </h2>
           <p className="text-xs text-neutral-500">
-            Discrete actionable work units mapped directly to this roadmap milestone.
+            {t('milestoneActionUnitsDesc')}
           </p>
         </div>
 
@@ -119,7 +121,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Create Task</span>
+          <span>{t('createTaskButton')}</span>
         </button>
       </div>
 
@@ -131,7 +133,7 @@ export const TaskList: React.FC<TaskListProps> = ({
         >
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <span className="font-semibold block">Action Constraint:</span>
+            <span className="font-semibold block">{t('actionConstraintPrefix')}:</span>
             <span>{errorMessage}</span>
           </div>
         </div>
@@ -143,7 +145,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-neutral-500 font-medium flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" />
-              <span>Status:</span>
+              <span>{t('statusLabel')}:</span>
             </span>
             {(['all', 'todo', 'in_progress', 'completed', 'blocked', 'cancelled'] as const).map((s) => (
               <button
@@ -156,24 +158,24 @@ export const TaskList: React.FC<TaskListProps> = ({
                     : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
                 }`}
               >
-                {s === 'all' ? 'All' : s.replace('_', ' ')}
+                {translateStatus(s, lang)}
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-neutral-500 font-medium">Priority:</span>
+            <span className="text-neutral-500 font-medium">{t('priorityLabel')}:</span>
             <select
               id="filter-priority-select"
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as any)}
               className="px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200"
             >
-              <option value="all">All Priorities</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="all">{t('allPrioritiesOption')}</option>
+              <option value="urgent">{translatePriority('urgent', lang)}</option>
+              <option value="high">{translatePriority('high', lang)}</option>
+              <option value="medium">{translatePriority('medium', lang)}</option>
+              <option value="low">{translatePriority('low', lang)}</option>
             </select>
           </div>
         </div>
@@ -190,10 +192,10 @@ export const TaskList: React.FC<TaskListProps> = ({
           </div>
           <div className="max-w-md mx-auto space-y-1">
             <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              No tasks created yet
+              {t('noTasksCreatedYetTitle')}
             </h3>
             <p className="text-xs text-neutral-500 leading-relaxed">
-              Decompose this milestone roadmap into concrete, focused action units to begin tracking execution.
+              {t('noTasksCreatedRoadmapDesc')}
             </p>
           </div>
           <div className="pt-2">
@@ -203,13 +205,13 @@ export const TaskList: React.FC<TaskListProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition"
             >
               <Plus className="w-4 h-4" />
-              <span>Create First Task</span>
+              <span>{t('createFirstTaskButton')}</span>
             </button>
           </div>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="p-6 text-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
-          No tasks match the active status/priority filter.
+          {t('noTasksMatchStatusPriority')}
         </div>
       ) : (
         <div id="tasks-container" className="space-y-2">
@@ -252,13 +254,13 @@ export const TaskList: React.FC<TaskListProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                  Delete Task
+                  {t('deleteTaskTitle')}
                 </h3>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Are you sure you want to delete <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{taskToDelete.title}"</span>?
+                  {t('confirmDeleteTaskPrefix')} <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{taskToDelete.title}"</span>?
                 </p>
                 <p className="text-[11px] text-neutral-400 mt-2">
-                  This operation strictly respects historical integrity. Tasks with attached sessions or weekly plans cannot be deleted.
+                  {t('deleteTaskHistoricalIntegrityNote')}
                 </p>
               </div>
             </div>
@@ -269,7 +271,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 onClick={() => setTaskToDelete(null)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 id="btn-confirm-delete-task"
@@ -277,7 +279,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 disabled={isDeleting}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                {isDeleting ? t('deleting') : t('confirmDeleteAction')}
               </button>
             </div>
           </div>

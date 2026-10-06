@@ -2,7 +2,7 @@ import React from 'react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { APP_ROUTES } from '../../app/routes/routes';
 import { useActiveSession } from '../../features/sessions/ActiveSessionContext';
-import { useUserPreferences } from '../../app/preferences';
+import { useUserPreferences, getTranslation, getRouteLabel } from '../../app/preferences';
 import { SyncStatusBadge } from '../../features/sync/SyncStatusBadge';
 import { AccountHeaderButton } from '../../features/auth/AccountHeaderButton';
 import { Menu, Settings } from 'lucide-react';
@@ -15,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const { currentRoute, params, navigate } = useRouter();
   const { activeSession, activeTask, formattedTime } = useActiveSession();
   const { preferences } = useUserPreferences();
+  const t = (key: any) => getTranslation(key, preferences.language);
   const activeRoute = APP_ROUTES.find((r) => r.id === currentRoute) || APP_ROUTES[0];
 
   return (
@@ -26,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         <button
           id="btn-open-mobile-menu"
           onClick={onOpenMobileMenu}
-          aria-label="Open Navigation Menu"
+          aria-label={t('openNavMenu')}
           className="md:hidden p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800 cursor-pointer"
         >
           <Menu className="w-5 h-5" />
@@ -36,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           <span className="text-neutral-400 font-medium">PathFlow</span>
           <span className="text-neutral-300 dark:text-neutral-700">/</span>
           <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-            {activeRoute.label}
+            {getRouteLabel(activeRoute.id, preferences.language, activeRoute.label)}
           </span>
           {params.id && (
             <>
@@ -56,12 +57,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
             id="header-active-session-indicator"
             onClick={() => navigate('sessions')}
             className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 cursor-pointer transition shadow-2xs"
-            title="Active session in progress. Click to view timer."
+            title={t('activeSessionHeaderTooltip')}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="font-mono font-bold tracking-tight">{formattedTime}</span>
             <span className="hidden md:inline max-w-[120px] truncate text-neutral-600 dark:text-neutral-300 text-[11px]">
-              {activeTask?.title || 'Session'}
+              {activeTask?.title || t('session')}
             </span>
           </button>
         )}
@@ -81,8 +82,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
               ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white'
               : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
           }`}
-          title="Settings & Preferences"
-          aria-label="Settings"
+          title={t('settingsTitle')}
+          aria-label={t('navSettings')}
         >
           <Settings className="w-3.5 h-3.5" />
           <span className="hidden lg:inline text-[10px] font-mono uppercase font-semibold">

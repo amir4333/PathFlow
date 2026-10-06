@@ -56,7 +56,7 @@ export const RoadmapTimeDistributionChart: React.FC<RoadmapTimeDistributionChart
             </h2>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {formatDurationHoursMinutes(totalActualMinutes)} {t('actualTime').toLowerCase()} across{' '}
+            {formatDurationHoursMinutes(totalActualMinutes)} {t('actualTime').toLowerCase()} {t('across')}{' '}
             {formatNumeral(items.length)} {t('roadmapsCount').toLowerCase()}
           </p>
         </div>

@@ -4,16 +4,19 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { Goal, Roadmap, Task, TaskPriority, TaskStatus } from '../../domain';
 import { RoadmapDetailedProgress } from '../../domain/services/progressReview';
 import {
+  useUserPreferences,
+  getTranslation,
+  formatShortDate,
+} from '../../app/preferences';
+import {
   MapPin,
   ArrowLeft,
   Calendar,
   Clock,
-  CheckCircle2,
   AlertCircle,
   CheckSquare,
   Target,
   Edit3,
-  Layers,
 } from 'lucide-react';
 import { RoadmapFormModal } from './RoadmapFormModal';
 import { TaskList } from '../tasks/TaskList';
@@ -25,6 +28,12 @@ interface RoadmapDetailViewProps {
 export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId }) => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = useCallback(
+    (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang),
+    [lang]
+  );
 
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [parentGoal, setParentGoal] = useState<Goal | null>(null);
@@ -71,11 +80,11 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       }
     } catch (err: unknown) {
       console.error('Failed to load roadmap details', err);
-      setError(err instanceof Error ? err.message : 'Roadmap not found or failed to load.');
+      setError(err instanceof Error ? err.message : t('roadmapNotFoundError'));
     } finally {
       setIsLoading(false);
     }
-  }, [application, roadmapId]);
+  }, [application, roadmapId, t]);
 
   useEffect(() => {
     loadRoadmapData();
@@ -107,7 +116,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       });
       await loadRoadmapData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to create task.');
+      setActionError(err instanceof Error ? err.message : t('failedToCreateTask'));
       throw err;
     }
   };
@@ -126,7 +135,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       await application.tasks.updateTask(taskId, data);
       await loadRoadmapData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update task.');
+      setActionError(err instanceof Error ? err.message : t('failedToUpdateTask'));
       throw err;
     }
   };
@@ -137,7 +146,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       await application.tasks.transitionTaskStatus(task.id, newStatus);
       await loadRoadmapData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to change task status.');
+      setActionError(err instanceof Error ? err.message : t('failedToChangeTaskStatus'));
     }
   };
 
@@ -147,14 +156,14 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
       await application.tasks.deleteTask(task.id);
       await loadRoadmapData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to delete task.');
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteTask'));
     }
   };
 
   if (isLoading) {
     return (
       <div className="p-12 text-center text-sm text-neutral-500">
-        Loading roadmap details...
+        {t('loadingRoadmapDetails')}
       </div>
     );
   }
@@ -166,23 +175,23 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
           onClick={() => navigate('roadmaps')}
           className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Roadmaps</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{t('backToRoadmaps')}</span>
         </button>
 
         <div className="p-8 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
           <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            {error || 'Roadmap Not Found'}
+            {error || t('roadmapNotFoundTitle')}
           </h2>
           <p className="text-xs text-neutral-500">
-            The requested roadmap milestone could not be found in local IndexedDB persistence.
+            {t('roadmapNotFoundDesc')}
           </p>
           <button
             onClick={() => navigate('roadmaps')}
             className="px-4 py-2 text-xs font-medium rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 cursor-pointer"
           >
-            Return to Roadmaps
+            {t('returnToRoadmaps')}
           </button>
         </div>
       </div>
@@ -190,7 +199,6 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
   }
 
   const taskPct = progress ? progress.taskCompletionPercentage : 0;
-  const timePct = progress ? progress.timeCompletionPercentage : 0;
 
   return (
     <div id="roadmap-detail-view" className="max-w-5xl mx-auto space-y-6">
@@ -207,8 +215,8 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
           }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 cursor-pointer transition"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{parentGoal ? `Back to Goal: ${parentGoal.title}` : 'Back to Roadmaps'}</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{parentGoal ? `${t('backToGoalPrefix')}: ${parentGoal.title}` : t('backToRoadmaps')}</span>
         </button>
 
         <button
@@ -217,7 +225,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
         >
           <Edit3 className="w-3.5 h-3.5" />
-          <span>Edit Roadmap</span>
+          <span>{t('editRoadmapButton')}</span>
         </button>
       </div>
 
@@ -238,7 +246,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <MapPin className="w-3 h-3 text-emerald-500" />
-                Roadmap Milestone
+                {t('roadmapMilestoneBadge')}
               </span>
 
               {parentGoal && (
@@ -247,11 +255,11 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
                   className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
                 >
                   <Target className="w-3 h-3 text-neutral-400" />
-                  <span>Goal: {parentGoal.title}</span>
+                  <span>{t('goalBadge')}: {parentGoal.title}</span>
                 </button>
               )}
 
-              <span className="text-xs font-mono text-neutral-400">ID: {roadmap.id}</span>
+              <span className="text-xs font-mono text-neutral-400">{t('idPrefix')}: {roadmap.id}</span>
             </div>
 
             <h1 id="roadmap-detail-title" className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
@@ -263,23 +271,23 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
                 {roadmap.description}
               </p>
             ) : (
-              <p className="text-xs text-neutral-400 italic">No description provided for this milestone pathway.</p>
+              <p className="text-xs text-neutral-400 italic">{t('noDescriptionForRoadmap')}</p>
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-l border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:pl-6 min-w-[190px]">
+          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-s border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:ps-6 min-w-[190px]">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Created: {new Date(roadmap.createdAt).toLocaleDateString()}</span>
+              <span>{t('createdPrefix')}: {formatShortDate(roadmap.createdAt, preferences)}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Updated: {new Date(roadmap.updatedAt).toLocaleDateString()}</span>
+              <span>{t('updatedPrefix')}: {formatShortDate(roadmap.updatedAt, preferences)}</span>
             </div>
             <div className="flex items-center gap-1.5 pt-1">
               <CheckSquare className="w-3.5 h-3.5 text-emerald-500" />
               <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                {progress?.totalTasks ?? 0} Tasks Assigned
+                {progress?.totalTasks ?? 0} {t('tasksAssignedSuffix')}
               </span>
             </div>
           </div>
@@ -289,7 +297,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Task Velocity
+              {t('taskVelocityLabel')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -303,39 +311,39 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Active / In Progress
+              {t('activeInProgressTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                 {progress?.inProgressTasks ?? 0}
               </span>
-              <span className="text-xs text-neutral-400">tasks active</span>
+              <span className="text-xs text-neutral-400">{t('tasksActiveSuffix')}</span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Actual Time Invested
+              {t('actualTimeInvestedTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                {progress?.totalActualMinutes ?? 0}m
+                {progress?.totalActualMinutes ?? 0}{t('minutesUnit')}
               </span>
               <span className="text-xs text-neutral-400">
-                ({progress?.sessionCount ?? 0} sessions)
+                ({progress?.sessionCount ?? 0} {t('sessionsCountSuffix')})
               </span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Estimated Work
+              {t('estimatedWorkTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                {progress?.totalEstimatedMinutes ?? 0}m
+                {progress?.totalEstimatedMinutes ?? 0}{t('minutesUnit')}
               </span>
-              <span className="text-xs text-neutral-400">total estimate</span>
+              <span className="text-xs text-neutral-400">{t('totalEstimateSuffix')}</span>
             </div>
           </div>
         </div>
@@ -343,7 +351,7 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({ roadmapId 
         {/* Progress bar visualizer */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-neutral-500">
-            <span>Milestone Completion Progress</span>
+            <span>{t('milestoneCompletionProgress')}</span>
             <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{taskPct}%</span>
           </div>
           <div className="w-full h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">

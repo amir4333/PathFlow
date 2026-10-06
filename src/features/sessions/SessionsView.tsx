@@ -151,15 +151,15 @@ export const SessionsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Phase 9C-1: History & Filtering
+              {t('phaseHistoryFiltering')}
             </span>
-            <span className="text-xs text-neutral-500">Live Execution</span>
+            <span className="text-xs text-neutral-500">{t('liveExecution')}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
-            Work Sessions & Time Tracking
+            {t('workSessionsAndTimeTracking')}
           </h1>
           <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
-            Execute focused blocks of deep work against actionable tasks. The timer counts upward offline and persists immutable historical sessions.
+            {t('workSessionsSubtitle')}
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export const SessionsView: React.FC = () => {
       {/* Active Session / Timer Component */}
       <section aria-labelledby="active-session-heading">
         <h2 id="active-session-heading" className="sr-only">
-          Active Session Timer
+          {t('activeSessionTimerHeading')}
         </h2>
         <ActiveSessionTimer onSessionCompleted={loadData} />
       </section>
@@ -230,7 +230,7 @@ export const SessionsView: React.FC = () => {
               </span>
               {hasActiveFilters && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  Active
+                  {t('statusActive')}
                 </span>
               )}
             </div>
@@ -389,17 +389,17 @@ export const SessionsView: React.FC = () => {
 
         {isLoading ? (
           <div className="p-8 text-center text-xs text-neutral-400 animate-pulse">
-            Loading session history...
+            {t('loadingSessionHistory')}
           </div>
         ) : totalDatabaseSessionsCount === 0 ? (
           /* Empty State 1: No sessions in database at all */
           <div className="p-8 text-center rounded-xl bg-white dark:bg-neutral-900 border border-dashed border-neutral-200 dark:border-neutral-800 space-y-3">
             <Clock className="w-8 h-8 text-neutral-400 mx-auto" />
             <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-              No completed sessions recorded yet
+              {t('noSessionsYet')}
             </h3>
             <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-              Start an active session using the timer above, or manually record a past work session.
+              {t('noSessionsYetDesc')}
             </p>
             <button
               id="btn-empty-log-manual-session"
@@ -407,7 +407,7 @@ export const SessionsView: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300 cursor-pointer transition"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Record a Past Session</span>
+              <span>{t('recordPastSession')}</span>
             </button>
           </div>
         ) : sessions.length === 0 ? (
@@ -480,12 +480,12 @@ export const SessionsView: React.FC = () => {
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                              {task ? task.title : `Task #${session.taskId.slice(0, 8)}`}
+                              {task ? task.title : `${t('task')} #${session.taskId.slice(0, 8)}`}
                             </span>
                             {task?.status === 'completed' && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 font-medium">
                                 <CheckCircle2 className="w-2.5 h-2.5" />
-                                Done
+                                {t('doneShort')}
                               </span>
                             )}
                           </div>

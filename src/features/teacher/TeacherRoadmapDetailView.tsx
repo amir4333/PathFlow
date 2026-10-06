@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useApplication } from '../../app/providers/ApplicationProvider';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus, translatePriority } from '../../app/preferences';
 import {
   Goal,
   Roadmap,
@@ -157,7 +157,7 @@ export const TeacherRoadmapDetailView: React.FC<TeacherRoadmapDetailViewProps> =
             type: 'task_completed',
             timestamp: t.completedAt,
             title: t.title,
-            badge: 'Task Completed',
+            badge: getTranslation('taskCompletedEvent', preferences.language),
           });
         }
       }
@@ -168,8 +168,8 @@ export const TeacherRoadmapDetailView: React.FC<TeacherRoadmapDetailViewProps> =
           id: `session-${s.id}`,
           type: 'session_recorded',
           timestamp: s.startedAt,
-          title: t?.title ?? `Task #${s.taskId.slice(0, 8)}`,
-          badge: 'Session',
+          title: t?.title ?? `${getTranslation('task', preferences.language)} #${s.taskId.slice(0, 8)}`,
+          badge: getTranslation('session', preferences.language),
           durationMinutes: s.durationMinutes,
           notes: (s as any).notes,
         });
@@ -352,7 +352,7 @@ export const TeacherRoadmapDetailView: React.FC<TeacherRoadmapDetailViewProps> =
             onClick={loadData}
             className="ml-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}
@@ -603,12 +603,12 @@ export const TeacherRoadmapDetailView: React.FC<TeacherRoadmapDetailViewProps> =
                                     : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
                                 }`}
                               >
-                                {task.status}
+                                {translateStatus(task.status, preferences.language)}
                               </span>
                             </td>
 
                             <td className="py-3 px-4 hidden sm:table-cell text-neutral-600 dark:text-neutral-400 capitalize">
-                              {task.priority}
+                              {translatePriority(task.priority, preferences.language)}
                             </td>
 
                             <td className="py-3 px-4 text-right font-mono text-neutral-600 dark:text-neutral-400">
@@ -636,7 +636,7 @@ export const TeacherRoadmapDetailView: React.FC<TeacherRoadmapDetailViewProps> =
                               <td colSpan={6} className="px-6 py-4 space-y-3">
                                 {task.description && (
                                   <div className="text-xs text-neutral-600 dark:text-neutral-400 max-w-2xl">
-                                    <strong className="text-neutral-900 dark:text-neutral-200">Description: </strong>
+                                    <strong className="text-neutral-900 dark:text-neutral-200">{t('description')}: </strong>
                                     {task.description}
                                   </div>
                                 )}

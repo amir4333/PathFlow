@@ -2,21 +2,30 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { Task, Roadmap, TaskPriority, TaskStatus } from '../../domain';
+import {
+  useUserPreferences,
+  getTranslation,
+  translateStatus,
+  translatePriority,
+} from '../../app/preferences';
 import { TaskCard } from './TaskCard';
 import { TaskFormModal } from './TaskFormModal';
 import {
   CheckSquare,
   Filter,
-  Plus,
   AlertCircle,
-  Clock,
-  Layers,
   MapPin,
 } from 'lucide-react';
 
 export const TaskListView: React.FC = () => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = useCallback(
+    (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang),
+    [lang]
+  );
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
@@ -47,11 +56,11 @@ export const TaskListView: React.FC = () => {
       setRoadmaps(fetchedRoadmaps);
     } catch (err: unknown) {
       console.error('Failed to load tasks', err);
-      setActionError(err instanceof Error ? err.message : 'Failed to load tasks.');
+      setActionError(err instanceof Error ? err.message : t('failedToLoadTasks'));
     } finally {
       setIsLoading(false);
     }
-  }, [application]);
+  }, [application, t]);
 
   useEffect(() => {
     loadData();
@@ -63,7 +72,7 @@ export const TaskListView: React.FC = () => {
       await application.tasks.transitionTaskStatus(task.id, newStatus);
       await loadData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to transition status.');
+      setActionError(err instanceof Error ? err.message : t('failedToTransitionStatus'));
     }
   };
 
@@ -85,7 +94,7 @@ export const TaskListView: React.FC = () => {
         await application.tasks.updateTask(selectedTask.id, data);
         await loadData();
       } catch (err: unknown) {
-        setActionError(err instanceof Error ? err.message : 'Failed to update task.');
+        setActionError(err instanceof Error ? err.message : t('failedToUpdateTask'));
       }
     }
   };
@@ -99,7 +108,7 @@ export const TaskListView: React.FC = () => {
       setTaskToDelete(null);
       await loadData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to delete task.');
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteTask'));
     } finally {
       setIsDeleting(false);
     }
@@ -125,14 +134,14 @@ export const TaskListView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
-              Tasks & Work Units
+              {t('tasksAndWorkUnitsTitle')}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              {tasks.length} total
+              {tasks.length} {t('totalSuffix')}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Actionable work units mapped directly to strategic roadmap milestones.
+            {t('tasksAndWorkUnitsSubtitle')}
           </p>
         </div>
 
@@ -146,7 +155,7 @@ export const TaskListView: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs hover:bg-neutral-800 dark:hover:bg-neutral-100 transition cursor-pointer self-start sm:self-auto"
           >
             <MapPin className="w-4 h-4 text-emerald-500" />
-            <span>Manage via Roadmaps</span>
+            <span>{t('manageViaRoadmapsButton')}</span>
           </button>
         )}
       </div>
@@ -158,7 +167,7 @@ export const TaskListView: React.FC = () => {
         >
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <span className="font-semibold block">Constraint or Transition Error:</span>
+            <span className="font-semibold block">{t('constraintOrTransitionErrorPrefix')}:</span>
             <span>{actionError}</span>
           </div>
         </div>
@@ -168,17 +177,17 @@ export const TaskListView: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
           <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-            Active Backlog
+            {t('activeBacklogTitle')}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
             <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{activeCount}</span>
-            <span className="text-xs text-neutral-400">units</span>
+            <span className="text-xs text-neutral-400">{t('unitsSuffix')}</span>
           </div>
         </div>
 
         <div className="p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
           <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-            Completed Tasks
+            {t('completedTasksTitle')}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
             <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{completedCount}</span>
@@ -188,21 +197,21 @@ export const TaskListView: React.FC = () => {
 
         <div className="p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
           <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-            Estimated Work
+            {t('estimatedWorkTitle')}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{totalEstimated}m</span>
-            <span className="text-xs text-neutral-400">total</span>
+            <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{totalEstimated}{t('minutesUnit')}</span>
+            <span className="text-xs text-neutral-400">{t('totalSuffix')}</span>
           </div>
         </div>
 
         <div className="p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
           <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-            Attached Roadmaps
+            {t('attachedRoadmapsTitle')}
           </span>
           <div className="flex items-baseline gap-1 mt-0.5">
             <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{roadmaps.length}</span>
-            <span className="text-xs text-neutral-400">milestones</span>
+            <span className="text-xs text-neutral-400">{t('milestonesSuffix')}</span>
           </div>
         </div>
       </div>
@@ -213,7 +222,7 @@ export const TaskListView: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-neutral-500 font-medium flex items-center gap-1">
               <Filter className="w-3.5 h-3.5" />
-              <span>Status:</span>
+              <span>{t('statusLabel')}:</span>
             </span>
             {(['all', 'todo', 'in_progress', 'completed', 'blocked', 'cancelled'] as const).map((s) => (
               <button
@@ -225,36 +234,36 @@ export const TaskListView: React.FC = () => {
                     : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
                 }`}
               >
-                {s === 'all' ? 'All' : s.replace('_', ' ')}
+                {translateStatus(s, lang)}
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-neutral-500 font-medium">Priority:</span>
+              <span className="text-neutral-500 font-medium">{t('priorityLabel')}:</span>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as any)}
                 className="px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200"
               >
-                <option value="all">All</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="all">{translatePriority('all', lang)}</option>
+                <option value="urgent">{translatePriority('urgent', lang)}</option>
+                <option value="high">{translatePriority('high', lang)}</option>
+                <option value="medium">{translatePriority('medium', lang)}</option>
+                <option value="low">{translatePriority('low', lang)}</option>
               </select>
             </div>
 
             {roadmaps.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-neutral-500 font-medium">Roadmap:</span>
+                <span className="text-neutral-500 font-medium">{t('roadmapSingular')}:</span>
                 <select
                   value={roadmapFilter}
                   onChange={(e) => setRoadmapFilter(e.target.value)}
                   className="px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 max-w-[160px] truncate"
                 >
-                  <option value="all">All Roadmaps</option>
+                  <option value="all">{t('allRoadmaps')}</option>
                   {roadmaps.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.title}
@@ -269,26 +278,26 @@ export const TaskListView: React.FC = () => {
 
       {/* Task List Content */}
       {isLoading ? (
-        <div className="p-12 text-center text-sm text-neutral-500">Loading tasks...</div>
+        <div className="p-12 text-center text-sm text-neutral-500">{t('loadingTasks')}</div>
       ) : tasks.length === 0 ? (
         <div className="p-10 text-center bg-white dark:bg-neutral-900 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-xl space-y-3">
           <CheckSquare className="w-8 h-8 text-neutral-400 mx-auto" />
           <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            No tasks created yet
+            {t('noTasksCreatedYetTitle')}
           </h3>
           <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-            Tasks belong directly to Milestone Roadmaps. Open a Roadmap to create its first actionable work unit.
+            {t('noTasksCreatedYetDesc')}
           </p>
           <button
             onClick={() => navigate('roadmaps')}
             className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition"
           >
-            Go to Roadmaps
+            {t('goToRoadmapsButton')}
           </button>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="p-6 text-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
-          No tasks match the active filters.
+          {t('noTasksMatchFilters')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -299,7 +308,7 @@ export const TaskListView: React.FC = () => {
                 {parentR && (
                   <div className="flex items-center gap-1.5 px-1 text-[11px] text-neutral-400">
                     <MapPin className="w-3 h-3 text-emerald-500" />
-                    <span>Roadmap:</span>
+                    <span>{t('roadmapSingular')}:</span>
                     <button
                       onClick={() => navigate('roadmaps', { id: parentR.id })}
                       className="hover:underline text-neutral-600 dark:text-neutral-300 font-medium cursor-pointer"
@@ -347,13 +356,13 @@ export const TaskListView: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                  Delete Task
+                  {t('deleteTaskTitle')}
                 </h3>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Are you sure you want to delete <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{taskToDelete.title}"</span>?
+                  {t('confirmDeleteTaskPrefix')} <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{taskToDelete.title}"</span>?
                 </p>
                 <p className="text-[11px] text-neutral-400 mt-2">
-                  This operation strictly respects historical integrity. Tasks with attached sessions or weekly plans cannot be deleted.
+                  {t('deleteTaskHistoricalIntegrityNote')}
                 </p>
               </div>
             </div>
@@ -363,14 +372,14 @@ export const TaskListView: React.FC = () => {
                 onClick={() => setTaskToDelete(null)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                {isDeleting ? t('deleting') : t('confirmDeleteAction')}
               </button>
             </div>
           </div>

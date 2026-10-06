@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Roadmap } from '../../domain';
+import { useUserPreferences, getTranslation } from '../../app/preferences';
 import { X, AlertCircle } from 'lucide-react';
 
 interface RoadmapFormModalProps {
@@ -19,6 +20,9 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
   goalTitle,
   mode,
 }) => {
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +46,7 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Roadmap title is required.');
+      setError(t('roadmapTitleRequired'));
       return;
     }
 
@@ -55,7 +59,7 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
       });
       onClose();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'An error occurred while saving the roadmap.';
+      const message = err instanceof Error ? err.message : t('errorSavingRoadmap');
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -76,11 +80,11 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800">
           <div>
             <h2 id="roadmap-modal-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-              {mode === 'create' ? 'Create Roadmap Milestone' : 'Edit Roadmap'}
+              {mode === 'create' ? t('createRoadmapMilestoneTitle') : t('editRoadmapTitle')}
             </h2>
             {goalTitle && (
               <p className="text-xs text-neutral-500 mt-0.5">
-                Under Goal: <span className="font-medium text-neutral-700 dark:text-neutral-300">{goalTitle}</span>
+                {t('underGoalPrefix')}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{goalTitle}</span>
               </p>
             )}
           </div>
@@ -88,7 +92,7 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
             id="btn-close-roadmap-modal"
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('closeAction')}
             className="p-1 rounded-md text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -111,14 +115,14 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
               htmlFor="roadmap-input-title"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5"
             >
-              Milestone Pathway Title <span className="text-rose-500">*</span>
+              {t('milestonePathwayTitleLabel')} <span className="text-rose-500">*</span>
             </label>
             <input
               id="roadmap-input-title"
               type="text"
               required
               autoFocus
-              placeholder="e.g. Raft Consensus Implementation"
+              placeholder={t('roadmapTitlePlaceholder')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
@@ -130,12 +134,12 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
               htmlFor="roadmap-input-description"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 mb-1.5"
             >
-              Description <span className="text-neutral-400 font-normal lowercase">(optional)</span>
+              {t('descriptionLabel')} <span className="text-neutral-400 font-normal lowercase">{t('optionalSuffix')}</span>
             </label>
             <textarea
               id="roadmap-input-description"
               rows={3}
-              placeholder="Detail the milestone objectives, scope, or sequence criteria..."
+              placeholder={t('roadmapDescriptionPlaceholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition resize-none"
@@ -150,7 +154,7 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 text-xs font-medium rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               id="btn-submit-roadmap-modal"
@@ -159,9 +163,9 @@ export const RoadmapFormModal: React.FC<RoadmapFormModalProps> = ({
               className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition shadow-xs disabled:opacity-50 flex items-center gap-1.5"
             >
               {isSubmitting ? (
-                <span>Saving...</span>
+                <span>{t('saving')}</span>
               ) : (
-                <span>{mode === 'create' ? 'Create Roadmap' : 'Save Changes'}</span>
+                <span>{mode === 'create' ? t('createRoadmapAction') : t('saveChangesAction')}</span>
               )}
             </button>
           </div>

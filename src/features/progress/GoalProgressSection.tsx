@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Target, Layers, CheckCircle2, Clock } from 'lucide-react';
 import { GoalPeriodProgress } from '../../domain';
-import { useUserPreferences, getTranslation } from '../../app/preferences';
+import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
 
 export interface GoalProgressSectionProps {
   readonly goals: readonly GoalPeriodProgress[];
@@ -79,7 +79,7 @@ export const GoalProgressSection: React.FC<GoalProgressSectionProps> = ({ goals 
                         : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
                     }`}
                   >
-                    {goal.status}
+                    {translateStatus(goal.status, preferences.language)}
                   </span>
                 </div>
 

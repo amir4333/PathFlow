@@ -3,21 +3,20 @@ import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { Goal, Roadmap } from '../../domain';
 import { RoadmapDetailedProgress } from '../../domain/services/progressReview';
+import { useUserPreferences, getTranslation } from '../../app/preferences';
 import {
   MapPin,
   Target,
   ArrowRight,
-  Layers,
-  ChevronRight,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   Plus,
 } from 'lucide-react';
 
 export const RoadmapListView: React.FC = () => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang);
 
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -69,11 +68,11 @@ export const RoadmapListView: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
-              Strategic Roadmaps
+              {t('strategicRoadmapsTitle')}
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
-            Decomposed milestone sequences and strategic pathways toward goals.
+            {t('strategicRoadmapsSubtitle')}
           </p>
         </div>
 
@@ -83,13 +82,13 @@ export const RoadmapListView: React.FC = () => {
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs cursor-pointer transition"
         >
           <Target className="w-4 h-4" />
-          <span>Manage Goals</span>
+          <span>{t('manageGoalsButton')}</span>
         </button>
       </div>
 
       {isLoading ? (
         <div className="p-12 text-center text-sm text-neutral-500">
-          Loading roadmaps from local database...
+          {t('loadingRoadmaps')}
         </div>
       ) : roadmaps.length === 0 ? (
         <div
@@ -101,10 +100,10 @@ export const RoadmapListView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-              No Roadmaps Created Yet
+              {t('noRoadmapsCreatedTitle')}
             </h2>
             <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-              Roadmaps are milestone pathways created within a Goal. Create or open a Goal to establish milestone tracks.
+              {t('noRoadmapsCreatedDesc')}
             </p>
           </div>
           <button
@@ -112,7 +111,7 @@ export const RoadmapListView: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs transition"
           >
             <Plus className="w-4 h-4" />
-            <span>Go to Goals to Create Roadmap</span>
+            <span>{t('goToGoalsToCreateRoadmap')}</span>
           </button>
         </div>
       ) : (
@@ -132,11 +131,11 @@ export const RoadmapListView: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/80">
-                      Roadmap
+                      {t('roadmapSingular')}
                     </span>
                     {parentGoal && (
                       <span className="text-xs text-neutral-500 truncate max-w-[200px]">
-                        Goal: <span className="font-medium text-neutral-700 dark:text-neutral-300">{parentGoal.title}</span>
+                        {t('goalBadge')}: <span className="font-medium text-neutral-700 dark:text-neutral-300">{parentGoal.title}</span>
                       </span>
                     )}
                   </div>
@@ -155,7 +154,9 @@ export const RoadmapListView: React.FC = () => {
                 <div className="mt-5 pt-3.5 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-neutral-500">
-                      {rProg ? `${rProg.completedTasks}/${rProg.totalTasks} Tasks Completed` : '0 Tasks'}
+                      {rProg
+                        ? `${rProg.completedTasks}/${rProg.totalTasks} ${t('tasksCompletedSuffix')}`
+                        : `0 ${t('tasksPlural')}`}
                     </span>
                     <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">
                       {taskPct}%
@@ -170,10 +171,14 @@ export const RoadmapListView: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between pt-1 text-[11px] text-neutral-500">
-                    <span>{rProg ? `${rProg.totalActualMinutes}m logged` : '0m logged'}</span>
+                    <span>
+                      {rProg
+                        ? `${rProg.totalActualMinutes}${t('minutesUnit')} ${t('loggedSuffix')}`
+                        : `0${t('minutesUnit')} ${t('loggedSuffix')}`}
+                    </span>
                     <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium group-hover:translate-x-0.5 transition-transform">
-                      <span>View Roadmap Details</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>{t('viewRoadmapDetailsAction')}</span>
+                      <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                     </span>
                   </div>
                 </div>

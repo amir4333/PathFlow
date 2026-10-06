@@ -4,6 +4,12 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { Goal, GoalStatus, Roadmap } from '../../domain';
 import { GoalDetailedProgress } from '../../domain/services/progressReview';
 import {
+  useUserPreferences,
+  getTranslation,
+  translateStatus,
+  formatShortDate,
+} from '../../app/preferences';
+import {
   Target,
   ArrowLeft,
   Plus,
@@ -15,8 +21,6 @@ import {
   CheckCircle2,
   Trash2,
   AlertCircle,
-  ExternalLink,
-  Layers,
   ChevronRight,
 } from 'lucide-react';
 import { GoalFormModal } from './GoalFormModal';
@@ -29,6 +33,12 @@ interface GoalDetailViewProps {
 export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
   const { navigate } = useRouter();
   const application = useApplication();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = useCallback(
+    (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang),
+    [lang]
+  );
 
   const [goal, setGoal] = useState<Goal | null>(null);
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
@@ -67,11 +77,11 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
       }
     } catch (err: unknown) {
       console.error('Failed to load goal details', err);
-      setError(err instanceof Error ? err.message : 'Goal not found or unable to load.');
+      setError(err instanceof Error ? err.message : t('goalNotFoundError'));
     } finally {
       setIsLoading(false);
     }
-  }, [application, goalId]);
+  }, [application, goalId, t]);
 
   useEffect(() => {
     loadGoalData();
@@ -94,7 +104,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
       await application.goals.archiveGoal(goal.id);
       await loadGoalData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to archive goal.');
+      setActionError(err instanceof Error ? err.message : t('failedToArchiveGoal'));
     }
   };
 
@@ -119,7 +129,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
 
   const handleDeleteRoadmap = async (e: React.MouseEvent, roadmap: Roadmap) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete roadmap "${roadmap.title}"?`)) {
+    if (!window.confirm(`${t('confirmDeleteRoadmapPrefix')} "${roadmap.title}"?`)) {
       return;
     }
 
@@ -128,7 +138,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
       await application.roadmaps.deleteRoadmap(roadmap.id);
       await loadGoalData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to delete roadmap.');
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteRoadmap'));
     }
   };
 
@@ -148,7 +158,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
   if (isLoading) {
     return (
       <div className="p-12 text-center text-sm text-neutral-500">
-        Loading goal details...
+        {t('loadingGoalDetails')}
       </div>
     );
   }
@@ -160,23 +170,23 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
           onClick={() => navigate('goals')}
           className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Goals</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{t('backToGoals')}</span>
         </button>
 
         <div className="p-8 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
           <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            {error || 'Goal Not Found'}
+            {error || t('goalNotFoundTitle')}
           </h2>
           <p className="text-xs text-neutral-500">
-            The requested strategic goal could not be found in local IndexedDB persistence.
+            {t('goalNotFoundDesc')}
           </p>
           <button
             onClick={() => navigate('goals')}
             className="px-4 py-2 text-xs font-medium rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 cursor-pointer"
           >
-            Return to Goals List
+            {t('returnToGoalsList')}
           </button>
         </div>
       </div>
@@ -184,7 +194,6 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
   }
 
   const taskPct = progress ? progress.taskCompletionPercentage : 0;
-  const timePct = progress ? progress.timeCompletionPercentage : 0;
 
   return (
     <div id="goal-detail-view" className="max-w-5xl mx-auto space-y-6">
@@ -195,8 +204,8 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
           onClick={() => navigate('goals')}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 cursor-pointer transition"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Strategic Goals</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{t('backToStrategicGoals')}</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -206,7 +215,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit Goal</span>
+            <span>{t('editGoalButton')}</span>
           </button>
 
           {goal.status !== 'archived' && (
@@ -216,7 +225,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
             >
               <Archive className="w-3.5 h-3.5" />
-              <span>Archive Goal</span>
+              <span>{t('archiveGoalButton')}</span>
             </button>
           )}
         </div>
@@ -239,7 +248,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
                 <Target className="w-3 h-3 text-emerald-500" />
-                Goal
+                {t('goalBadge')}
               </span>
 
               <span
@@ -257,10 +266,10 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                 {goal.status === 'in_progress' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
                 {goal.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                 {goal.status === 'archived' && <Archive className="w-3 h-3 text-neutral-400" />}
-                <span className="capitalize">{goal.status.replace('_', ' ')}</span>
+                <span className="capitalize">{translateStatus(goal.status, lang)}</span>
               </span>
 
-              <span className="text-xs font-mono text-neutral-400">ID: {goal.id}</span>
+              <span className="text-xs font-mono text-neutral-400">{t('idPrefix')}: {goal.id}</span>
             </div>
 
             <h1 id="goal-detail-title" className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
@@ -272,23 +281,23 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                 {goal.description}
               </p>
             ) : (
-              <p className="text-xs text-neutral-400 italic">No description provided.</p>
+              <p className="text-xs text-neutral-400 italic">{t('noDescriptionProvided')}</p>
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-l border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:pl-6 min-w-[190px]">
+          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-s border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:ps-6 min-w-[190px]">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Created: {new Date(goal.createdAt).toLocaleDateString()}</span>
+              <span>{t('createdPrefix')}: {formatShortDate(goal.createdAt, preferences)}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Updated: {new Date(goal.updatedAt).toLocaleDateString()}</span>
+              <span>{t('updatedPrefix')}: {formatShortDate(goal.updatedAt, preferences)}</span>
             </div>
             <div className="flex items-center gap-1.5 pt-1">
               <MapPin className="w-3.5 h-3.5 text-emerald-500" />
               <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                {roadmaps.length} Roadmap{roadmaps.length === 1 ? '' : 's'} Attached
+                {roadmaps.length} {roadmaps.length === 1 ? t('roadmapSingular') : t('roadmapsPlural')} {t('attachedSuffix')}
               </span>
             </div>
           </div>
@@ -298,19 +307,19 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Roadmaps
+              {t('roadmapsPlural')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                 {progress?.completedRoadmaps ?? 0}
               </span>
-              <span className="text-xs text-neutral-400">/ {roadmaps.length} completed</span>
+              <span className="text-xs text-neutral-400">/ {roadmaps.length} {t('completedSuffix')}</span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Tasks Velocity
+              {t('tasksVelocityTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -324,27 +333,27 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Actual Time Invested
+              {t('actualTimeInvestedTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                {progress?.totalActualMinutes ?? 0}m
+                {progress?.totalActualMinutes ?? 0}{t('minutesUnit')}
               </span>
               <span className="text-xs text-neutral-400">
-                ({progress?.sessionCount ?? 0} sessions)
+                ({progress?.sessionCount ?? 0} {t('sessionsCountSuffix')})
               </span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Estimated Time
+              {t('estimatedTimeTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                {progress?.totalEstimatedMinutes ?? 0}m
+                {progress?.totalEstimatedMinutes ?? 0}{t('minutesUnit')}
               </span>
-              <span className="text-xs text-neutral-400">planned</span>
+              <span className="text-xs text-neutral-400">{t('plannedSuffix')}</span>
             </div>
           </div>
         </div>
@@ -352,7 +361,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
         {/* Progress bar visualizer */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-neutral-500">
-            <span>Overall Milestone Completion</span>
+            <span>{t('overallMilestoneCompletion')}</span>
             <span className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{taskPct}%</span>
           </div>
           <div className="w-full h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
@@ -370,10 +379,10 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
           <div>
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <span>Milestone Roadmaps</span>
+              <span>{t('milestoneRoadmapsLabel')}</span>
             </h2>
             <p className="text-xs text-neutral-500">
-              Strategic pathways and milestones decomposing this goal.
+              {t('milestoneRoadmapsDesc')}
             </p>
           </div>
 
@@ -383,7 +392,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition shadow-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Roadmap</span>
+            <span>{t('addRoadmapButton')}</span>
           </button>
         </div>
 
@@ -397,10 +406,10 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                No roadmaps attached to this goal
+                {t('noRoadmapsAttachedTitle')}
               </h3>
               <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-                Break this strategic goal down into sequential or parallel milestone pathways to start mapping actionable tasks.
+                {t('noRoadmapsAttachedDesc')}
               </p>
             </div>
             <button
@@ -409,7 +418,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition shadow-xs"
             >
               <Plus className="w-4 h-4" />
-              <span>Create First Roadmap</span>
+              <span>{t('createFirstRoadmapButton')}</span>
             </button>
           </div>
         ) : (
@@ -435,8 +444,8 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                         <button
                           id={`btn-edit-roadmap-${roadmap.id}`}
                           onClick={(e) => openEditRoadmapModal(e, roadmap)}
-                          aria-label="Edit Roadmap"
-                          title="Edit Roadmap"
+                          aria-label={t('editRoadmapButton')}
+                          title={t('editRoadmapButton')}
                           className="p-1 rounded text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -444,8 +453,8 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                         <button
                           id={`btn-delete-roadmap-${roadmap.id}`}
                           onClick={(e) => handleDeleteRoadmap(e, roadmap)}
-                          aria-label="Delete Roadmap"
-                          title="Delete Roadmap"
+                          aria-label={t('deleteRoadmapButton')}
+                          title={t('deleteRoadmapButton')}
                           className="p-1 rounded text-neutral-400 hover:text-rose-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -467,7 +476,9 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                   <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-[11px] text-neutral-500">
-                        {rProg ? `${rProg.completedTasks}/${rProg.totalTasks} Tasks` : '0 Tasks'}
+                        {rProg
+                          ? `${rProg.completedTasks}/${rProg.totalTasks} ${t('tasksPlural')}`
+                          : `0 ${t('tasksPlural')}`}
                       </span>
                       <span className="font-mono text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                         {rTaskPct}%
@@ -482,10 +493,14 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
                     </div>
 
                     <div className="flex items-center justify-between pt-1 text-[11px] text-neutral-500">
-                      <span>{rProg ? `${rProg.totalActualMinutes}m logged` : '0m logged'}</span>
+                      <span>
+                        {rProg
+                          ? `${rProg.totalActualMinutes}${t('minutesUnit')} ${t('loggedSuffix')}`
+                          : `0${t('minutesUnit')} ${t('loggedSuffix')}`}
+                      </span>
                       <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 font-medium group-hover:translate-x-0.5 transition-transform">
-                        <span>Details</span>
-                        <ChevronRight className="w-3 h-3" />
+                        <span>{t('detailsAction')}</span>
+                        <ChevronRight className="w-3 h-3 rtl:rotate-180" />
                       </span>
                     </div>
                   </div>

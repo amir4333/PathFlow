@@ -3,25 +3,28 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useActiveSession } from '../sessions/ActiveSessionContext';
 import { APP_CONFIG } from '../../app/config/appConfig';
-import { APP_ROUTES, AppRouteId } from '../../app/routes/routes';
+import { APP_ROUTES } from '../../app/routes/routes';
 import {
-  Compass,
+  useUserPreferences,
+  getTranslation,
+  getRouteLabel,
+  getRouteDescription,
+  getRouteGroupLabel,
+} from '../../app/preferences';
+import {
   CheckCircle2,
-  Layers,
   ArrowRight,
-  FolderTree,
   Shield,
   Clock,
-  Sparkles,
-  GitBranch,
-  Play,
-  Square,
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { navigate } = useRouter();
   const application = useApplication();
   const { activeSession, activeTask, formattedTime } = useActiveSession();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang);
   const [stats, setStats] = useState<{
     totalGoals: number;
     activeGoals: number;
@@ -94,6 +97,23 @@ export const DashboardView: React.FC = () => {
 
   const featureCards = APP_ROUTES.filter((route) => route.id !== 'dashboard');
 
+  const workflowSteps = [
+    t('workflowStepGoal'),
+    t('workflowStepRoadmap'),
+    t('workflowStepTask'),
+    t('workflowStepSession'),
+    t('workflowStepTime'),
+    t('workflowStepProgress'),
+    t('workflowStepReview'),
+  ];
+
+  const principlesList = [
+    t('principleDomainFirst'),
+    t('principleOfflineFirst'),
+    t('principleStrictValidation'),
+    t('principleReadOnlyTeacher'),
+  ];
+
   return (
     <div id="dashboard-view" className="max-w-5xl mx-auto space-y-8">
       {/* Welcome & Phase 1 Header */}
@@ -111,12 +131,12 @@ export const DashboardView: React.FC = () => {
               {APP_CONFIG.name}
             </h1>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1 max-w-2xl">
-              {APP_CONFIG.tagline}. This is the initial Phase 1 foundation shell verifying routing, layout modularity, and strict architectural separation.
+              {t('appTagline')}. {t('dashboardSubtitle')}
             </p>
           </div>
           <div className="flex items-center gap-2 self-start md:self-center">
             <span className="px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-mono border border-neutral-200 dark:border-neutral-700">
-              Offline-First Ready
+              {t('offlineFirstReady')}
             </span>
           </div>
         </div>
@@ -125,20 +145,20 @@ export const DashboardView: React.FC = () => {
         <div className="pt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-              Core Workflow Pipeline
+              {t('coreWorkflowPipeline')}
             </h2>
             <span className="text-xs text-neutral-400">
-              Goal → Roadmap → Task → Session → Time → Progress → Review
+              {workflowSteps.join(' → ')}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2 p-3.5 bg-neutral-50 dark:bg-neutral-950/50 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs font-medium">
-            {APP_CONFIG.coreWorkflow.map((step, idx) => (
+            {workflowSteps.map((step, idx) => (
               <React.Fragment key={step}>
                 <span className="px-2.5 py-1 rounded bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 shadow-2xs">
                   {step}
                 </span>
-                {idx < APP_CONFIG.coreWorkflow.length - 1 && (
-                  <ArrowRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                {idx < workflowSteps.length - 1 && (
+                  <ArrowRight className="w-3.5 h-3.5 text-neutral-400 shrink-0 rtl:rotate-180" />
                 )}
               </React.Fragment>
             ))}
@@ -159,20 +179,20 @@ export const DashboardView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400">
-                  Active Focus Session
+                  {t('activeFocusSessionTitle')}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <div className="font-bold text-neutral-900 dark:text-neutral-100 text-base">
-                {activeTask?.title || 'Active Task'}
+                {activeTask?.title || t('activeTaskFallback')}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="text-right">
+            <div className="text-end">
               <div className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 font-semibold">
-                Elapsed
+                {t('elapsedLabel')}
               </div>
               <span className="font-mono text-2xl sm:text-3xl font-bold text-neutral-950 dark:text-white">
                 {formattedTime}
@@ -182,7 +202,7 @@ export const DashboardView: React.FC = () => {
               onClick={() => navigate('sessions')}
               className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition shadow-xs"
             >
-              Open Timer
+              {t('openTimer')}
             </button>
           </div>
         </div>
@@ -194,67 +214,67 @@ export const DashboardView: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
-              Strategic Portfolio & Pipeline Status
+              {t('strategicPortfolioStatus')}
             </h2>
           </div>
           <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-            Phase 9A: Active Session & Time Tracking
+            {t('phase9aBanner')}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
           <button
             onClick={() => navigate('goals')}
-            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-start transition cursor-pointer"
           >
-            <span className="text-xs text-neutral-500 block">Active Goals</span>
+            <span className="text-xs text-neutral-500 block">{t('activeGoalsLabel')}</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.activeGoals}</span>
-              <span className="text-xs text-neutral-400">/ {stats.totalGoals} total</span>
+              <span className="text-xs text-neutral-400">/ {stats.totalGoals} {t('totalSuffix')}</span>
             </div>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
-              {stats.inProgressGoals} in progress
+              {stats.inProgressGoals} {t('inProgressSuffix')}
             </span>
           </button>
 
           <button
             onClick={() => navigate('roadmaps')}
-            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-start transition cursor-pointer"
           >
-            <span className="text-xs text-neutral-500 block">Milestone Roadmaps</span>
+            <span className="text-xs text-neutral-500 block">{t('milestoneRoadmapsLabel')}</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalRoadmaps}</span>
-              <span className="text-xs text-neutral-400">pathways</span>
+              <span className="text-xs text-neutral-400">{t('pathwaysSuffix')}</span>
             </div>
             <span className="text-[10px] text-neutral-400 mt-1 block">
-              Attached to goals
+              {t('attachedToGoals')}
             </span>
           </button>
 
           <button
             onClick={() => navigate('sessions')}
-            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-start transition cursor-pointer"
           >
-            <span className="text-xs text-neutral-500 block">Time Invested</span>
+            <span className="text-xs text-neutral-500 block">{t('timeInvestedLabel')}</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalActualMinutes}m</span>
-              <span className="text-xs text-neutral-400">({stats.totalSessions} sessions)</span>
+              <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.totalActualMinutes}{t('minutesUnit')}</span>
+              <span className="text-xs text-neutral-400">({stats.totalSessions} {t('sessionsCountSuffix')})</span>
             </div>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
-              Manage / View Timers →
+              {t('manageViewTimers')} →
             </span>
           </button>
 
           <button
             onClick={() => navigate('tasks')}
-            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-left transition cursor-pointer"
+            className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-lg text-start transition cursor-pointer"
           >
-            <span className="text-xs text-neutral-500 block">Tasks</span>
+            <span className="text-xs text-neutral-500 block">{t('tasksCardLabel')}</span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{stats.activeTasks}</span>
-              <span className="text-xs text-neutral-400">/ {stats.totalTasks} total</span>
+              <span className="text-xs text-neutral-400">/ {stats.totalTasks} {t('totalSuffix')}</span>
             </div>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 block">
-              {stats.completedTasks} completed
+              {stats.completedTasks} {t('completedSuffix')}
             </span>
           </button>
         </div>
@@ -265,37 +285,37 @@ export const DashboardView: React.FC = () => {
         <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-1.5">
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Routing Shell</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('routingShellTitle')}</span>
           </div>
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Zero-Dep Hash Sync</p>
-          <p className="text-xs text-neutral-500">8 typed routes responsive to URL navigation & history.</p>
+          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{t('routingShellValue')}</p>
+          <p className="text-xs text-neutral-500">{t('routingShellDesc')}</p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-1.5">
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Architecture</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('architectureTitle')}</span>
           </div>
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Layer Decoupling</p>
-          <p className="text-xs text-neutral-500">Domain, Data, Sync, and Presentation isolated.</p>
+          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{t('architectureValue')}</p>
+          <p className="text-xs text-neutral-500">{t('architectureDesc')}</p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-1.5">
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">TypeScript</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('typescriptTitle')}</span>
           </div>
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Strict Type Safety</p>
-          <p className="text-xs text-neutral-500">No premature data models or unsafe any casts.</p>
+          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{t('typescriptValue')}</p>
+          <p className="text-xs text-neutral-500">{t('typescriptDesc')}</p>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-1.5">
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Dependencies</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('dependenciesTitle')}</span>
           </div>
-          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Minimal Baseline</p>
-          <p className="text-xs text-neutral-500">Clean footprint ready for future PWA & IndexedDB.</p>
+          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{t('dependenciesValue')}</p>
+          <p className="text-xs text-neutral-500">{t('dependenciesDesc')}</p>
         </div>
       </div>
 
@@ -304,14 +324,14 @@ export const DashboardView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
-              Module Placeholders
+              {t('modulePlaceholdersTitle')}
             </h2>
             <p className="text-xs text-neutral-500">
-              Click any module to inspect its architectural placeholder and Phase 2+ roadmap responsibilities.
+              {t('modulePlaceholdersDesc')}
             </p>
           </div>
           <span className="text-xs font-mono text-neutral-500">
-            {featureCards.length} modules registered
+            {featureCards.length} {t('modulesRegistered')}
           </span>
         </div>
 
@@ -321,22 +341,22 @@ export const DashboardView: React.FC = () => {
               key={route.id}
               id={`card-nav-${route.id}`}
               onClick={() => navigate(route.id)}
-              className="text-left p-5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all shadow-2xs group cursor-pointer"
+              className="text-start p-5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all shadow-2xs group cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  {route.category}
+                  {getRouteGroupLabel(route.category, lang)}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
                   {route.id}
                 </span>
               </div>
               <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-neutral-950 dark:group-hover:text-white flex items-center justify-between">
-                <span>{route.label}</span>
-                <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                <span>{getRouteLabel(route.id, lang, route.label)}</span>
+                <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 rtl:rotate-180 transition-transform" />
               </h3>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 line-clamp-2">
-                {route.description}
+                {getRouteDescription(route.id, lang, route.description)}
               </p>
               <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800/60 flex items-center gap-1.5 text-xs text-neutral-500">
                 <Clock className="w-3.5 h-3.5" />
@@ -351,10 +371,10 @@ export const DashboardView: React.FC = () => {
       <div className="bg-neutral-50 dark:bg-neutral-950/40 border border-neutral-200 dark:border-neutral-800 rounded-xl p-5 space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
           <Shield className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
-          <span>Architectural Principles Enforced</span>
+          <span>{t('architecturalPrinciplesTitle')}</span>
         </div>
         <ul className="grid sm:grid-cols-2 gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-          {APP_CONFIG.principles.map((principle, i) => (
+          {principlesList.map((principle, i) => (
             <li key={i} className="flex items-center gap-2">
               <span className="w-1 h-1 rounded-full bg-neutral-400" />
               <span>{principle}</span>

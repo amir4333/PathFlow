@@ -10,6 +10,7 @@
  */
 
 export type AppLanguage = 'en' | 'fa';
+export type Language = AppLanguage;
 export type AppCalendar = 'gregorian' | 'persian';
 
 export interface UserPreferences {

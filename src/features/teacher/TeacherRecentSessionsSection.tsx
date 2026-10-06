@@ -52,7 +52,7 @@ export const TeacherRecentSessionsSection: React.FC<TeacherRecentSessionsSection
               <div className="min-w-0 space-y-1">
                 <div className="flex items-center space-x-2 flex-wrap">
                   <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                    {session.taskTitle ?? `Task #${session.taskId.slice(0, 8)}`}
+                    {session.taskTitle ?? `${t('task')} #${session.taskId.slice(0, 8)}`}
                   </span>
                   {session.roadmapTitle && (
                     <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 font-medium">

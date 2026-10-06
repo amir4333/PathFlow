@@ -3,6 +3,11 @@ import { useApplication } from '../../app/providers/ApplicationProvider';
 import { useRouter } from '../../app/providers/RouterProvider';
 import { useActiveSession } from '../sessions/ActiveSessionContext';
 import { Task, Roadmap, Goal, TaskStatus, TaskPriority, canTransitionTaskStatus } from '../../domain';
+import {
+  useUserPreferences,
+  getTranslation,
+  formatShortDate,
+} from '../../app/preferences';
 import { TaskFormModal } from './TaskFormModal';
 import { ManualSessionModal } from '../sessions/ManualSessionModal';
 import { getPriorityBadge, getStatusConfig } from './TaskCard';
@@ -17,9 +22,7 @@ import {
   Edit2,
   Trash2,
   ChevronDown,
-  Layers,
   Play,
-  Square,
 } from 'lucide-react';
 
 interface TaskDetailViewProps {
@@ -30,6 +33,12 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
   const { navigate } = useRouter();
   const application = useApplication();
   const { activeSession, formattedTime, startSession } = useActiveSession();
+  const { preferences } = useUserPreferences();
+  const lang = preferences.language;
+  const t = useCallback(
+    (key: Parameters<typeof getTranslation>[0]) => getTranslation(key, lang),
+    [lang]
+  );
 
   const [task, setTask] = useState<Task | null>(null);
   const [parentRoadmap, setParentRoadmap] = useState<Roadmap | null>(null);
@@ -89,11 +98,11 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
       }
     } catch (err: unknown) {
       console.error('Failed to load task details', err);
-      setError(err instanceof Error ? err.message : 'Task not found or failed to load.');
+      setError(err instanceof Error ? err.message : t('taskNotFoundError'));
     } finally {
       setIsLoading(false);
     }
-  }, [application, taskId]);
+  }, [application, taskId, t]);
 
   useEffect(() => {
     loadTaskData();
@@ -111,7 +120,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
       await application.tasks.updateTask(task.id, data);
       await loadTaskData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update task.');
+      setActionError(err instanceof Error ? err.message : t('failedToUpdateTask'));
     }
   };
 
@@ -122,7 +131,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
       await application.tasks.transitionTaskStatus(task.id, newStatus);
       await loadTaskData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to change task status.');
+      setActionError(err instanceof Error ? err.message : t('failedToChangeTaskStatus'));
     }
   };
 
@@ -139,7 +148,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
         navigate('roadmaps');
       }
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : 'Failed to delete task.');
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteTask'));
       setIsDeleteModalOpen(false);
     } finally {
       setIsDeleting(false);
@@ -149,7 +158,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
   if (isLoading) {
     return (
       <div className="p-12 text-center text-sm text-neutral-500">
-        Loading task details...
+        {t('loadingTaskDetails')}
       </div>
     );
   }
@@ -161,31 +170,31 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
           onClick={() => navigate('roadmaps')}
           className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Roadmaps</span>
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+          <span>{t('backToRoadmaps')}</span>
         </button>
 
         <div className="p-8 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
           <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-            {error || 'Task Not Found'}
+            {error || t('taskNotFoundTitle')}
           </h2>
           <p className="text-xs text-neutral-500">
-            The requested task could not be found in local IndexedDB persistence.
+            {t('taskNotFoundDesc')}
           </p>
           <button
             onClick={() => navigate('roadmaps')}
             className="px-4 py-2 text-xs font-medium rounded-lg bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 cursor-pointer"
           >
-            Return to Roadmaps
+            {t('returnToRoadmaps')}
           </button>
         </div>
       </div>
     );
   }
 
-  const priorityBadge = getPriorityBadge(task.priority);
-  const statusConfig = getStatusConfig(task.status);
+  const priorityBadge = getPriorityBadge(task.priority, lang);
+  const statusConfig = getStatusConfig(task.status, lang);
   const StatusIcon = statusConfig.icon;
 
   const allStatuses: TaskStatus[] = ['todo', 'in_progress', 'completed', 'blocked', 'cancelled'];
@@ -223,13 +232,13 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
               onClick={() => navigate('roadmaps')}
               className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 flex items-center gap-1 cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Roadmaps</span>
+              <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span>{t('roadmapsPlural')}</span>
             </button>
           )}
 
           <span className="text-neutral-400">/</span>
-          <span className="font-semibold text-neutral-900 dark:text-neutral-100">Task Details</span>
+          <span className="font-semibold text-neutral-900 dark:text-neutral-100">{t('taskDetailsBreadcrumb')}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -238,11 +247,11 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
               id="btn-task-active-session"
               onClick={() => navigate('sessions')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 cursor-pointer transition shadow-2xs"
-              title="Session currently in progress for this task. Click to open Sessions."
+              title={t('sessionInProgressTooltip')}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="font-mono">{formattedTime}</span>
-              <span>Running</span>
+              <span>{t('runningBadge')}</span>
             </button>
           ) : (
             task && task.status !== 'completed' && task.status !== 'cancelled' && (
@@ -254,13 +263,13 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                       await startSession(task.id);
                       navigate('sessions');
                     } catch (err: unknown) {
-                      setActionError(err instanceof Error ? err.message : 'Failed to start session');
+                      setActionError(err instanceof Error ? err.message : t('failedToStartSession'));
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 cursor-pointer transition shadow-2xs"
                 >
                   <Play className="w-3 h-3 fill-current" />
-                  <span>Start Session</span>
+                  <span>{t('startSessionButton')}</span>
                 </button>
                 <button
                   id="btn-manual-task-session"
@@ -268,7 +277,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Log Past Session</span>
+                  <span>{t('logPastSession')}</span>
                 </button>
               </>
             )
@@ -280,7 +289,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
           >
             <Edit2 className="w-3.5 h-3.5" />
-            <span>Edit</span>
+            <span>{t('editAction')}</span>
           </button>
           <button
             id="btn-delete-task-detail"
@@ -288,7 +297,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-rose-200 dark:border-rose-900 cursor-pointer transition"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete</span>
+            <span>{t('deleteAction')}</span>
           </button>
         </div>
       </div>
@@ -300,7 +309,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
         >
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <span className="font-semibold block">Constraint or Transition Error:</span>
+            <span className="font-semibold block">{t('constraintOrTransitionErrorPrefix')}:</span>
             <span>{actionError}</span>
           </div>
         </div>
@@ -326,18 +335,18 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                 {isStatusDropdownOpen && (
                   <div
                     id="detail-status-menu"
-                    className="absolute left-0 mt-1 w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg py-1 z-20 text-xs"
+                    className="absolute start-0 mt-1 w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg py-1 z-20 text-xs"
                   >
                     <div className="px-2 py-1 text-[10px] uppercase font-semibold text-neutral-400">
-                      Transition to:
+                      {t('transitionTo')}
                     </div>
                     {allowableTransitions.length === 0 ? (
                       <div className="px-3 py-1.5 text-neutral-400 italic text-[11px]">
-                        No valid transitions
+                        {t('noValidTransitions')}
                       </div>
                     ) : (
                       allowableTransitions.map((statusOption) => {
-                        const optConfig = getStatusConfig(statusOption);
+                        const optConfig = getStatusConfig(statusOption, lang);
                         const OptIcon = optConfig.icon;
                         return (
                           <button
@@ -347,7 +356,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                               setIsStatusDropdownOpen(false);
                               handleStatusChange(statusOption);
                             }}
-                            className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
+                            className="w-full px-3 py-1.5 text-start flex items-center gap-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 cursor-pointer"
                           >
                             <OptIcon className="w-3.5 h-3.5" />
                             <span>{optConfig.label}</span>
@@ -364,10 +373,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                 id="task-detail-priority"
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${priorityBadge.classes}`}
               >
-                {priorityBadge.label} Priority
+                {priorityBadge.label} {t('prioritySuffix')}
               </span>
 
-              <span className="text-xs font-mono text-neutral-400">ID: {task.id}</span>
+              <span className="text-xs font-mono text-neutral-400">{t('idPrefix')}: {task.id}</span>
             </div>
 
             <h1 id="task-detail-title" className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
@@ -379,24 +388,24 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                 {task.description}
               </p>
             ) : (
-              <p className="text-xs text-neutral-400 italic">No description provided for this work unit.</p>
+              <p className="text-xs text-neutral-400 italic">{t('noDescriptionForTask')}</p>
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-l border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:pl-6 min-w-[200px]">
+          <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 text-xs text-neutral-500 border-t md:border-t-0 md:border-s border-neutral-200 dark:border-neutral-800 pt-4 md:pt-0 md:ps-6 min-w-[200px]">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Created: {new Date(task.createdAt).toLocaleDateString()}</span>
+              <span>{t('createdPrefix')}: {formatShortDate(task.createdAt, preferences)}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-neutral-400" />
-              <span>Updated: {new Date(task.updatedAt).toLocaleDateString()}</span>
+              <span>{t('updatedPrefix')}: {formatShortDate(task.updatedAt, preferences)}</span>
             </div>
             {task.completedAt && (
               <div className="flex items-center gap-1.5 pt-1 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span className="font-medium">
-                  Completed: {new Date(task.completedAt).toLocaleDateString()}
+                  {t('completedPrefix')}: {formatShortDate(task.completedAt, preferences)}
                 </span>
               </div>
             )}
@@ -407,43 +416,43 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Estimated Time
+              {t('estimatedTimeTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-                {task.estimatedMinutes}m
+                {task.estimatedMinutes}{t('minutesUnit')}
               </span>
-              <span className="text-xs text-neutral-400">planned</span>
+              <span className="text-xs text-neutral-400">{t('plannedSuffix')}</span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Actual Time Invested
+              {t('actualTimeInvestedTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {taskSessions.totalMinutes}m
+                {taskSessions.totalMinutes}{t('minutesUnit')}
               </span>
-              <span className="text-xs text-neutral-400">logged</span>
+              <span className="text-xs text-neutral-400">{t('loggedSuffix')}</span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Execution Sessions
+              {t('executionSessionsTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                 {taskSessions.count}
               </span>
-              <span className="text-xs text-neutral-400">sessions</span>
+              <span className="text-xs text-neutral-400">{t('sessionsCountSuffix')}</span>
             </div>
           </div>
 
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200 dark:border-neutral-800">
             <span className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider block">
-              Variance
+              {t('varianceTitle')}
             </span>
             <div className="mt-1 flex items-baseline gap-1">
               <span
@@ -453,9 +462,9 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                     : 'text-neutral-900 dark:text-neutral-100'
                 }`}
               >
-                {taskSessions.totalMinutes - task.estimatedMinutes}m
+                {taskSessions.totalMinutes - task.estimatedMinutes}{t('minutesUnit')}
               </span>
-              <span className="text-xs text-neutral-400">variance</span>
+              <span className="text-xs text-neutral-400">{t('varianceSuffix')}</span>
             </div>
           </div>
         </div>
@@ -463,20 +472,20 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
         {/* Strategic Lineage Card */}
         <div className="p-4 bg-neutral-50 dark:bg-neutral-950/40 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            Strategic Lineage
+            {t('strategicLineageTitle')}
           </span>
           <div className="flex items-center gap-2 text-xs flex-wrap">
             {parentGoal && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300">
                 <Target className="w-3.5 h-3.5 text-neutral-400" />
-                <span>Goal: {parentGoal.title}</span>
+                <span>{t('goalBadge')}: {parentGoal.title}</span>
               </span>
             )}
 
             {parentRoadmap && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300">
                 <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Roadmap: {parentRoadmap.title}</span>
+                <span>{t('roadmapSingular')}: {parentRoadmap.title}</span>
               </span>
             )}
           </div>
@@ -509,13 +518,13 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                  Delete Task
+                  {t('deleteTaskTitle')}
                 </h3>
                 <p className="text-xs text-neutral-500 mt-1">
-                  Are you sure you want to delete <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{task.title}"</span>?
+                  {t('confirmDeleteTaskPrefix')} <span className="font-semibold text-neutral-700 dark:text-neutral-300">"{task.title}"</span>?
                 </p>
                 <p className="text-[11px] text-neutral-400 mt-2">
-                  This operation strictly respects historical integrity. Tasks with attached sessions or weekly plans cannot be deleted.
+                  {t('deleteTaskHistoricalIntegrityNote')}
                 </p>
               </div>
             </div>
@@ -526,7 +535,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 id="btn-confirm-detail-delete"
@@ -534,7 +543,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
                 disabled={isDeleting}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                {isDeleting ? t('deleting') : t('confirmDeleteAction')}
               </button>
             </div>
           </div>
