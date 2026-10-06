@@ -259,6 +259,32 @@ export class SessionService {
   }
 
   /**
+   * Deletes a completed/recorded historical session by its unique ID.
+   */
+  async deleteSession(sessionId: EntityId): Promise<void> {
+    if (!isValidEntityId(sessionId)) {
+      throw new ValidationError(['Session ID must be a valid non-empty identifier.']);
+    }
+
+    let existing: Session | null;
+    try {
+      existing = await this.sessionRepo.getById(sessionId);
+    } catch (err) {
+      handleRepositoryError(err, `Failed to fetch session "${sessionId}".`);
+    }
+
+    if (!existing) {
+      throw new NotFoundError('Session', sessionId);
+    }
+
+    try {
+      await this.sessionRepo.delete(sessionId);
+    } catch (err) {
+      handleRepositoryError(err, `Failed to delete session "${sessionId}".`);
+    }
+  }
+
+  /**
    * Queries completed session history with optional multi-dimensional filtering,
    * deterministic newest-first sorting, and derived duration aggregation.
    *

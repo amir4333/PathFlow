@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { InMemorySyncOutbox, SyncMutation } from '../../src/sync';
+import 'fake-indexeddb/auto';
+import { InMemorySyncOutbox, SyncMutation, createSyncRecordingRepositories } from '../../src/sync';
 import { generateEntityId, createTimestamp } from '../../src/domain';
+import { PathFlowDB, createLocalRepositories } from '../../src/data';
+import { createApplicationServices } from '../../src/application';
 
 test('SyncOutbox: Enqueue mutations in FIFO order with default pending status', async () => {
   const outbox = new InMemorySyncOutbox();
@@ -81,3 +84,48 @@ test('SyncOutbox: Transition statuses through in_flight, synced, and failed with
   all = await outbox.getAll();
   assert.equal(all.length, 0);
 });
+
+test('SyncOutbox & SyncRecordingRepositories: SessionService.deleteSession() records session/delete mutation', async () => {
+  const db = new PathFlowDB(`test-sync-session-delete-${generateEntityId()}`);
+  const baseRepos = createLocalRepositories(db);
+  const outbox = new InMemorySyncOutbox();
+
+  const syncRepos = createSyncRecordingRepositories({
+    repositories: baseRepos,
+    outbox,
+    getDeviceId: () => 'device-session-delete-test',
+  });
+
+  const services = createApplicationServices(syncRepos);
+
+  const goal = await services.goals.createGoal({ title: 'Sync Session Delete Goal' });
+  const roadmap = await services.roadmaps.createRoadmap({ goalId: goal.id, title: 'Sync Roadmap' });
+  const task = await services.tasks.createTask({ roadmapId: roadmap.id, title: 'Sync Task' });
+
+  const session = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-20T10:00:00.000Z',
+    endedAt: '2026-09-20T11:00:00.000Z',
+  });
+
+  // Delete the recorded session via SessionService
+  await services.sessions.deleteSession(session.id);
+
+  // Verify session is removed from local storage
+  const deleted = await services.sessions.getSession(session.id);
+  assert.equal(deleted, null);
+
+  // Verify outbox recorded the session/delete mutation
+  const pending = await outbox.getPending();
+  const deleteMutationItem = pending.find(
+    (item) => item.mutation.entityType === 'session' && item.mutation.operation === 'delete'
+  );
+
+  assert.ok(deleteMutationItem, 'Expected a session/delete mutation in the sync outbox');
+  assert.equal(deleteMutationItem.mutation.entityId, session.id);
+  assert.equal(deleteMutationItem.mutation.payload, null);
+  assert.equal(deleteMutationItem.mutation.deviceId, 'device-session-delete-test');
+
+  db.close();
+});
+

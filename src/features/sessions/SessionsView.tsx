@@ -16,6 +16,8 @@ import {
   Layers,
   CheckSquare,
   Sparkles,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 
 export const SessionsView: React.FC = () => {
@@ -47,6 +49,9 @@ export const SessionsView: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const hasActiveFilters = Boolean(
     filterStartDate || filterEndDate || filterTaskId || filterRoadmapId
@@ -129,6 +134,22 @@ export const SessionsView: React.FC = () => {
     setFilterEndDate('');
     setFilterTaskId('');
     setFilterRoadmapId('');
+  };
+
+  const handleConfirmDeleteSession = async () => {
+    if (!sessionToDelete || isDeleting) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await application.sessions.deleteSession(sessionToDelete.id);
+      setSessionToDelete(null);
+      await loadData();
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : t('failedToDeleteSession'));
+      setSessionToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const selectableTasks = filterRoadmapId
@@ -387,6 +408,26 @@ export const SessionsView: React.FC = () => {
           )}
         </div>
 
+        {deleteError && (
+          <div
+            id="session-delete-error"
+            data-testid="session-delete-error"
+            className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 flex items-center justify-between gap-2 text-xs text-rose-700 dark:text-rose-300"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDeleteError(null)}
+              className="text-xs text-rose-700 dark:text-rose-300 underline cursor-pointer"
+            >
+              {t('dismiss')}
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="p-8 text-center text-xs text-neutral-400 animate-pulse">
             {t('loadingSessionHistory')}
@@ -498,7 +539,7 @@ export const SessionsView: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Timing interval & Duration badge */}
+                        {/* Timing interval, Duration badge & Delete action */}
                         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-neutral-800/40 shrink-0 text-xs">
                           <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 font-mono text-[11px] sm:text-xs">
                             <Clock className="w-3 h-3 text-neutral-400 shrink-0" />
@@ -507,10 +548,26 @@ export const SessionsView: React.FC = () => {
                             <span>{endTime}</span>
                           </div>
 
-                          <div className="text-right">
+                          <div className="flex items-center gap-2">
                             <span className="inline-block px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-mono font-semibold text-xs border border-neutral-200 dark:border-neutral-700">
                               {durationText}
                             </span>
+
+                            <button
+                              type="button"
+                              id={`btn-delete-session-${session.id}`}
+                              data-testid={`btn-delete-session-${session.id}`}
+                              onClick={() => {
+                                setDeleteError(null);
+                                setSessionToDelete(session);
+                              }}
+                              disabled={isDeleting}
+                              title={t('deleteSession')}
+                              aria-label={t('deleteSession')}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -531,6 +588,70 @@ export const SessionsView: React.FC = () => {
           loadData();
         }}
       />
+
+      {/* Delete Recorded Session Confirmation Modal */}
+      {sessionToDelete && (
+        <div
+          id="delete-session-modal-backdrop"
+          data-testid="delete-session-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        >
+          <div
+            id="delete-session-modal"
+            data-testid="delete-session-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-session-modal-title"
+            className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xl space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3
+                  id="delete-session-modal-title"
+                  className="text-sm font-semibold text-neutral-900 dark:text-neutral-100"
+                >
+                  {t('deleteSessionConfirmQuestion')}
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1 truncate">
+                  {tasksMap[sessionToDelete.taskId]
+                    ? tasksMap[sessionToDelete.taskId].title
+                    : `${t('task')} #${sessionToDelete.taskId.slice(0, 8)}`}{' '}
+                  ({formatDurationHoursMinutes(sessionToDelete.durationMinutes)})
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-2">
+                  {t('deleteSessionCannotUndo')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <button
+                type="button"
+                id="btn-cancel-delete-session"
+                data-testid="btn-cancel-delete-session"
+                onClick={() => setSessionToDelete(null)}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-delete-session"
+                data-testid="btn-confirm-delete-session"
+                onClick={handleConfirmDeleteSession}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? t('deleting') : t('confirmDeleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

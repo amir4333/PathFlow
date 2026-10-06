@@ -18,6 +18,8 @@ import {
   DependencyConstraintError,
   ActiveSessionConflictError,
   InvalidStateTransitionError,
+  ApplicationPersistenceError,
+  SessionService,
 } from '../../src/application';
 
 function setupServices(): { services: ApplicationServices; db: PathFlowDB } {
@@ -344,3 +346,117 @@ test('Progress & Review Application Service: daily and weekly summary calculatio
   assert.equal(goalProg.goalId, goal.id);
   assert.equal(goalProg.totalActualMinutes, 120);
 });
+
+test('Session Application Service: deleteSession validation, missing session, successful deletion, historical integrity, and repository error handling', async () => {
+  const { services, db } = setupServices();
+
+  const goal = await services.goals.createGoal({ title: 'Systems Programming' });
+  const roadmap = await services.roadmaps.createRoadmap({ goalId: goal.id, title: 'Memory Allocators' });
+  const task = await services.tasks.createTask({
+    roadmapId: roadmap.id,
+    title: 'Slab Allocator Implementation',
+    estimatedMinutes: 120,
+  });
+
+  // 1. Invalid session ID throws ValidationError
+  await assert.rejects(
+    async () => {
+      await services.sessions.deleteSession('');
+    },
+    (err: unknown) => err instanceof ValidationError
+  );
+
+  await assert.rejects(
+    async () => {
+      await services.sessions.deleteSession('   ');
+    },
+    (err: unknown) => err instanceof ValidationError
+  );
+
+  // 2. Non-existent session ID throws NotFoundError
+  await assert.rejects(
+    async () => {
+      await services.sessions.deleteSession('non-existent-session-id');
+    },
+    (err: unknown) => {
+      assert.ok(err instanceof NotFoundError);
+      assert.equal((err as NotFoundError).entityType, 'Session');
+      assert.equal((err as NotFoundError).entityId, 'non-existent-session-id');
+      return true;
+    }
+  );
+
+  // 3. Create two recorded sessions on the task
+  const session1 = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-18T09:00:00.000Z',
+    endedAt: '2026-09-18T10:00:00.000Z', // 60m
+  });
+  const session2 = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-18T14:00:00.000Z',
+    endedAt: '2026-09-18T15:30:00.000Z', // 90m
+  });
+
+  // Verify initial state (2 sessions, 150 minutes)
+  let history = await services.sessions.querySessionHistory({ taskId: task.id });
+  assert.equal(history.totalSessions, 2);
+  assert.equal(history.totalMinutes, 150);
+
+  // Task deletion must still be blocked while sessions exist
+  await assert.rejects(
+    async () => {
+      await services.tasks.deleteTask(task.id);
+    },
+    (err: unknown) => err instanceof DependencyConstraintError
+  );
+
+  // 4. Delete first session successfully
+  await services.sessions.deleteSession(session1.id);
+
+  const deletedLookup = await services.sessions.getSession(session1.id);
+  assert.equal(deletedLookup, null);
+
+  // Verify remaining session and updated derived aggregates (1 session, 90 minutes)
+  history = await services.sessions.querySessionHistory({ taskId: task.id });
+  assert.equal(history.totalSessions, 1);
+  assert.equal(history.totalMinutes, 90);
+  assert.equal(history.sessions[0].id, session2.id);
+
+  const progressAfterFirstDelete = await services.progress.getGoalProgress(goal.id);
+  assert.equal(progressAfterFirstDelete.totalActualMinutes, 90);
+
+  // Deleting the already-deleted session again throws NotFoundError
+  await assert.rejects(
+    async () => {
+      await services.sessions.deleteSession(session1.id);
+    },
+    (err: unknown) => err instanceof NotFoundError
+  );
+
+  // 5. Repository error handling: wraps unexpected repository failures in ApplicationPersistenceError
+  const repos = createLocalRepositories(db);
+  const failingSessionService = new SessionService(
+    {
+      ...repos.sessions,
+      getById: async () => session2,
+      delete: async () => {
+        throw new Error('Simulated IndexedDB transaction failure');
+      },
+    },
+    repos.tasks,
+    repos.roadmaps
+  );
+
+  await assert.rejects(
+    async () => {
+      await failingSessionService.deleteSession(session2.id);
+    },
+    (err: unknown) => {
+      assert.ok(err instanceof ApplicationPersistenceError);
+      assert.match((err as Error).message, /Simulated IndexedDB transaction failure/);
+      return true;
+    }
+  );
+});
+

@@ -438,3 +438,76 @@ test('10. Existing session filtering behavior remains completely unchanged', asy
   assert.equal(formatDurationHoursMinutes(queryResult.totalMinutes, { language: 'en', calendar: 'gregorian' }), '1h 30m');
   assert.equal(formatDurationHoursMinutes(queryResult.totalMinutes, { language: 'fa', calendar: 'persian' }), '۱ ساعت و ۳۰ دقیقه');
 });
+
+test('11. Deleting a recorded session updates session history, daily grouping, and derived totals without affecting active session', async () => {
+  const { services } = setupServices();
+
+  const goal = await services.goals.createGoal({ title: 'Session Deletion UX' });
+  const roadmap = await services.roadmaps.createRoadmap({ goalId: goal.id, title: 'History Management' });
+  const task = await services.tasks.createTask({ roadmapId: roadmap.id, title: 'Focus Block' });
+
+  const s1 = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-20T09:00:00.000Z',
+    endedAt: '2026-09-20T10:00:00.000Z', // 60m on Sep 20
+  });
+  const s2 = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-20T14:00:00.000Z',
+    endedAt: '2026-09-20T15:30:00.000Z', // 90m on Sep 20
+  });
+  const s3 = await services.sessions.createManualSession({
+    taskId: task.id,
+    startedAt: '2026-09-21T10:00:00.000Z',
+    endedAt: '2026-09-21T10:45:00.000Z', // 45m on Sep 21
+  });
+
+  // Start an active session to ensure deleting a recorded session does not interfere with active timer
+  const active = await services.sessions.startSession(task.id, '2026-09-22T08:00:00.000Z');
+  assert.ok(active);
+
+  // Initial state: 3 sessions across 2 days, 195 minutes total
+  let history = await services.sessions.querySessionHistory();
+  assert.equal(history.totalSessions, 3);
+  assert.equal(history.totalMinutes, 195);
+
+  let dayGroups = groupSessionsByDay(history.sessions, { language: 'en', calendar: 'gregorian' });
+  assert.equal(dayGroups.length, 2);
+  assert.equal(dayGroups[0].dateKey, '2026-09-21');
+  assert.equal(dayGroups[0].sessionCount, 1);
+  assert.equal(dayGroups[1].dateKey, '2026-09-20');
+  assert.equal(dayGroups[1].sessionCount, 2);
+  assert.equal(dayGroups[1].totalMinutes, 150);
+
+  // Delete s2 (90m on Sep 20)
+  await services.sessions.deleteSession(s2.id);
+
+  history = await services.sessions.querySessionHistory();
+  assert.equal(history.totalSessions, 2);
+  assert.equal(history.totalMinutes, 105);
+
+  dayGroups = groupSessionsByDay(history.sessions, { language: 'en', calendar: 'gregorian' });
+  assert.equal(dayGroups.length, 2);
+  assert.equal(dayGroups[1].dateKey, '2026-09-20');
+  assert.equal(dayGroups[1].sessionCount, 1);
+  assert.equal(dayGroups[1].totalMinutes, 60);
+  assert.equal(dayGroups[1].formattedTotalTime, '1h');
+
+  // Delete s3 (only session on Sep 21) -> Sep 21 group disappears
+  await services.sessions.deleteSession(s3.id);
+
+  history = await services.sessions.querySessionHistory();
+  assert.equal(history.totalSessions, 1);
+  assert.equal(history.totalMinutes, 60);
+
+  dayGroups = groupSessionsByDay(history.sessions, { language: 'en', calendar: 'gregorian' });
+  assert.equal(dayGroups.length, 1);
+  assert.equal(dayGroups[0].dateKey, '2026-09-20');
+  assert.equal(dayGroups[0].sessions[0].id, s1.id);
+
+  // Active session remains untouched
+  const stillActive = await services.sessions.getActiveSession();
+  assert.ok(stillActive);
+  assert.equal(stillActive.id, active.id);
+});
+

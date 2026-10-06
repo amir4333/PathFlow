@@ -892,6 +892,10 @@ export const TRANSLATIONS = {
     workflowStepSession: 'Session',
     workflowStepTask: 'Task',
     workflowStepTime: 'Time',
+    deleteSession: 'Delete session',
+    deleteSessionConfirmQuestion: 'Delete this recorded session?',
+    deleteSessionCannotUndo: 'This action cannot be undone.',
+    failedToDeleteSession: 'Failed to delete session.',
   },
   fa: {
     settingsTitle: 'تنظیمات و ترجیحات کاربر',
@@ -1780,6 +1784,10 @@ export const TRANSLATIONS = {
     workflowStepSession: 'جلسه',
     workflowStepTask: 'وظیفه',
     workflowStepTime: 'زمان',
+    deleteSession: 'حذف جلسه',
+    deleteSessionConfirmQuestion: 'این جلسه ثبت‌شده حذف شود؟',
+    deleteSessionCannotUndo: 'این عملیات قابل بازگشت نیست.',
+    failedToDeleteSession: 'حذف جلسه با خطا مواجه شد.',
   },
 } as const;
 
