@@ -10,9 +10,12 @@ import {
   UserPreferences,
   AppLanguage,
   AppCalendar,
+  AppTheme,
   DEFAULT_PREFERENCES,
   loadStoredPreferences,
   saveStoredPreferences,
+  resolveTheme,
+  applyThemeToDocument,
 } from './userPreferences';
 import {
   formatDate as formatWithPrefs,
@@ -25,9 +28,11 @@ import {
 import { getTranslation, TranslationKey } from './translations';
 
 export interface UserPreferencesContextValue {
-  preferences: UserPreferences;
+  preferences: UserPreferences & { readonly theme: AppTheme };
+  theme: AppTheme;
   setLanguage: (lang: AppLanguage) => void;
   setCalendar: (cal: AppCalendar) => void;
+  setTheme: (theme: AppTheme) => void;
   setPreferences: (newPrefs: Partial<UserPreferences>) => void;
   formatDate: (timestamp: string | Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatDateTime: (
@@ -52,13 +57,22 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
   children,
   initialPreferences,
 }) => {
-  const [preferences, setPreferencesState] = useState<UserPreferences>(() => {
-    return initialPreferences || loadStoredPreferences();
+  const [preferences, setPreferencesState] = useState<UserPreferences & { readonly theme: AppTheme }>(() => {
+    const initial = initialPreferences
+      ? {
+          language: initialPreferences.language,
+          calendar: initialPreferences.calendar,
+          theme: resolveTheme(initialPreferences.theme),
+        }
+      : loadStoredPreferences();
+    applyThemeToDocument(initial.theme);
+    return initial;
   });
 
-  // Sync to localStorage whenever preferences change
+  // Sync to localStorage and document root whenever preferences change
   useEffect(() => {
     saveStoredPreferences(preferences);
+    applyThemeToDocument(preferences.theme);
 
     if (typeof document !== 'undefined') {
       document.documentElement.lang = preferences.language;
@@ -75,11 +89,22 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
     setPreferencesState((prev) => ({ ...prev, calendar }));
   }, []);
 
+  const setTheme = useCallback((nextTheme: AppTheme) => {
+    const resolved = resolveTheme(nextTheme);
+    applyThemeToDocument(resolved);
+    setPreferencesState((prev) => ({ ...prev, theme: resolved }));
+  }, []);
+
   const setPreferences = useCallback((newPrefs: Partial<UserPreferences>) => {
-    setPreferencesState((prev) => ({
-      ...prev,
-      ...newPrefs,
-    }));
+    setPreferencesState((prev) => {
+      const updated = {
+        ...prev,
+        ...newPrefs,
+        theme: newPrefs.theme !== undefined ? resolveTheme(newPrefs.theme) : prev.theme,
+      };
+      applyThemeToDocument(updated.theme);
+      return updated;
+    });
   }, []);
 
   const formatDate = useCallback(
@@ -137,8 +162,10 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
   const value = useMemo<UserPreferencesContextValue>(
     () => ({
       preferences,
+      theme: preferences.theme,
       setLanguage,
       setCalendar,
+      setTheme,
       setPreferences,
       formatDate,
       formatDateTime,
@@ -152,6 +179,7 @@ export const UserPreferencesProvider: React.FC<UserPreferencesProviderProps> = (
       preferences,
       setLanguage,
       setCalendar,
+      setTheme,
       setPreferences,
       formatDate,
       formatDateTime,

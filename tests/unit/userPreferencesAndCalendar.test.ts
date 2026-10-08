@@ -6,7 +6,10 @@ import {
   loadStoredPreferences,
   saveStoredPreferences,
   UserPreferences,
+  AppTheme,
   PREFERENCES_STORAGE_KEY,
+  resolveTheme,
+  applyThemeToDocument,
 } from '../../src/app/preferences/userPreferences';
 import {
   formatDate,
@@ -48,9 +51,10 @@ class MockStorage implements Storage {
   }
 }
 
-test('UserPreferences: Default preferences are English and Gregorian', () => {
+test('UserPreferences: Default preferences are English, Gregorian, and Light theme', () => {
   assert.equal(DEFAULT_PREFERENCES.language, 'en');
   assert.equal(DEFAULT_PREFERENCES.calendar, 'gregorian');
+  assert.equal(DEFAULT_PREFERENCES.theme, 'light');
 
   const mockStorage = new MockStorage();
   const loaded = loadStoredPreferences(mockStorage);
@@ -64,6 +68,7 @@ test('UserPreferences: Persistence into storage and restoration across reloads',
   const customPrefs: UserPreferences = {
     language: 'fa',
     calendar: 'persian',
+    theme: 'dark',
   };
   saveStoredPreferences(customPrefs, mockStorage);
 
@@ -73,6 +78,7 @@ test('UserPreferences: Persistence into storage and restoration across reloads',
   const parsed = JSON.parse(raw);
   assert.equal(parsed.language, 'fa');
   assert.equal(parsed.calendar, 'persian');
+  assert.equal(parsed.theme, 'dark');
 
   // Load back as if reload happened
   const restored = loadStoredPreferences(mockStorage);
@@ -83,18 +89,92 @@ test('UserPreferences: Changing language and calendar independently', () => {
   const mockStorage = new MockStorage();
 
   // Combination 1: English + Persian calendar
-  const enPersian: UserPreferences = { language: 'en', calendar: 'persian' };
+  const enPersian: UserPreferences = { language: 'en', calendar: 'persian', theme: 'light' };
   saveStoredPreferences(enPersian, mockStorage);
   assert.deepEqual(loadStoredPreferences(mockStorage), enPersian);
 
   // Combination 2: Persian language + Gregorian calendar
-  const faGregorian: UserPreferences = { language: 'fa', calendar: 'gregorian' };
+  const faGregorian: UserPreferences = { language: 'fa', calendar: 'gregorian', theme: 'light' };
   saveStoredPreferences(faGregorian, mockStorage);
   assert.deepEqual(loadStoredPreferences(mockStorage), faGregorian);
 
   // Corrupted JSON fallback
   mockStorage.setItem(PREFERENCES_STORAGE_KEY, '{invalid json');
   assert.deepEqual(loadStoredPreferences(mockStorage), DEFAULT_PREFERENCES);
+});
+
+test('UserPreferences Theme: missing and invalid theme fallback, valid dark theme loading, and theme updates', () => {
+  const mockStorage = new MockStorage();
+
+  // 1. Legacy saved preferences missing `theme` field -> fallback to 'light'
+  mockStorage.setItem(
+    PREFERENCES_STORAGE_KEY,
+    JSON.stringify({ language: 'fa', calendar: 'persian' })
+  );
+  const loadedMissingTheme = loadStoredPreferences(mockStorage);
+  assert.equal(loadedMissingTheme.language, 'fa');
+  assert.equal(loadedMissingTheme.calendar, 'persian');
+  assert.equal(loadedMissingTheme.theme, 'light');
+
+  // 2. Saved preferences with invalid `theme` value -> fallback to 'light'
+  mockStorage.setItem(
+    PREFERENCES_STORAGE_KEY,
+    JSON.stringify({ language: 'en', calendar: 'gregorian', theme: 'system' })
+  );
+  const loadedInvalidTheme = loadStoredPreferences(mockStorage);
+  assert.equal(loadedInvalidTheme.theme, 'light');
+
+  assert.equal(resolveTheme(undefined), 'light');
+  assert.equal(resolveTheme(null), 'light');
+  assert.equal(resolveTheme('invalid'), 'light');
+  assert.equal(resolveTheme('light'), 'light');
+  assert.equal(resolveTheme('dark'), 'dark');
+
+  // 3. Valid 'dark' theme loading and persistence
+  const darkPrefs: UserPreferences = {
+    language: 'en',
+    calendar: 'gregorian',
+    theme: 'dark',
+  };
+  saveStoredPreferences(darkPrefs, mockStorage);
+  const loadedDark = loadStoredPreferences(mockStorage);
+  assert.equal(loadedDark.theme, 'dark');
+
+  // 4. Theme update from 'dark' -> 'light' preserves language & calendar
+  const updatedThemePrefs: UserPreferences = {
+    ...loadedDark,
+    theme: 'light' as AppTheme,
+  };
+  saveStoredPreferences(updatedThemePrefs, mockStorage);
+  const reloadedAfterUpdate = loadStoredPreferences(mockStorage);
+  assert.equal(reloadedAfterUpdate.theme, 'light');
+  assert.equal(reloadedAfterUpdate.language, 'en');
+  assert.equal(reloadedAfterUpdate.calendar, 'gregorian');
+});
+
+test('UserPreferences Theme: applyThemeToDocument toggles dark class on <html>', () => {
+  const classes = new Set<string>();
+  const mockDocument = {
+    documentElement: {
+      classList: {
+        add: (cls: string) => classes.add(cls),
+        remove: (cls: string) => classes.delete(cls),
+        contains: (cls: string) => classes.has(cls),
+      },
+    },
+  } as unknown as Document;
+
+  // Apply dark theme -> adds 'dark' class
+  applyThemeToDocument('dark', mockDocument);
+  assert.equal(classes.has('dark'), true);
+
+  // Switch to light theme -> removes 'dark' class
+  applyThemeToDocument('light', mockDocument);
+  assert.equal(classes.has('dark'), false);
+
+  // Switch back to dark theme -> adds 'dark' class again
+  applyThemeToDocument('dark', mockDocument);
+  assert.equal(classes.has('dark'), true);
 });
 
 test('DateFormatting: Pure presentation without mutating underlying ISO timestamps', () => {

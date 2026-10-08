@@ -6,6 +6,8 @@ import { getDefaultServerUrl, isValidServerUrl } from '../../sync/config/serverC
 import {
   Languages,
   Calendar as CalendarIcon,
+  Sun,
+  Moon,
   Sparkles,
   CheckCircle2,
   Database,
@@ -30,8 +32,10 @@ import {
 export const SettingsView: React.FC = () => {
   const {
     preferences,
+    theme,
     setLanguage,
     setCalendar,
+    setTheme,
     formatDate,
     formatTime,
     formatDurationMinutes,
@@ -703,6 +707,94 @@ export const SettingsView: React.FC = () => {
               {preferences.calendar === 'persian' && (
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
               )}
+            </button>
+          </div>
+        </section>
+
+        {/* Theme Preference Card */}
+        <section
+          id="theme-preference-section"
+          aria-labelledby="theme-preference-heading"
+          className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xs space-y-4 md:col-span-2"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+              {theme === 'dark' ? (
+                <Moon className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+            </div>
+            <div>
+              <h2
+                id="theme-preference-heading"
+                className="text-sm font-semibold text-neutral-900 dark:text-neutral-100"
+              >
+                {t('light')} / {t('dark')}
+              </h2>
+              <p className="text-[11px] text-neutral-500 mt-0.5">
+                {theme === 'dark' ? t('switchToLightMode') : t('switchToDarkMode')}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              id="pref-theme-light"
+              type="button"
+              onClick={() => setTheme('light')}
+              aria-label={t('switchToLightMode')}
+              className={`flex items-center justify-between p-3.5 rounded-xl border text-xs font-medium cursor-pointer transition text-left ${
+                theme === 'light'
+                  ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900 shadow-2xs'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Sun className="w-4 h-4 shrink-0" />
+                <div>
+                  <div className="font-semibold">{t('light')}</div>
+                  <div
+                    className={`text-[10px] mt-0.5 ${
+                      theme === 'light'
+                        ? 'text-neutral-300 dark:text-neutral-600'
+                        : 'text-neutral-400'
+                    }`}
+                  >
+                    {t('switchToLightMode')}
+                  </div>
+                </div>
+              </div>
+              {theme === 'light' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+            </button>
+
+            <button
+              id="pref-theme-dark"
+              type="button"
+              onClick={() => setTheme('dark')}
+              aria-label={t('switchToDarkMode')}
+              className={`flex items-center justify-between p-3.5 rounded-xl border text-xs font-medium cursor-pointer transition text-left ${
+                theme === 'dark'
+                  ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900 shadow-2xs'
+                  : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Moon className="w-4 h-4 shrink-0" />
+                <div>
+                  <div className="font-semibold">{t('dark')}</div>
+                  <div
+                    className={`text-[10px] mt-0.5 ${
+                      theme === 'dark'
+                        ? 'text-neutral-300 dark:text-neutral-600'
+                        : 'text-neutral-400'
+                    }`}
+                  >
+                    {t('switchToDarkMode')}
+                  </div>
+                </div>
+              </div>
+              {theme === 'dark' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
             </button>
           </div>
         </section>
