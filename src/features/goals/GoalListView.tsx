@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Archive,
   Edit3,
+  Trash2,
   MapPin,
   Clock,
   CheckCircle2,
@@ -39,6 +40,10 @@ export const GoalListView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+
+  // Delete Confirmation State
+  const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -100,6 +105,22 @@ export const GoalListView: React.FC = () => {
       await loadData();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : t('failedToArchiveGoal'));
+    }
+  };
+
+  const handleConfirmDeleteGoal = async () => {
+    if (!goalToDelete || isDeleting) return;
+    try {
+      setIsDeleting(true);
+      setActionError(null);
+      await application.goals.deleteGoal(goalToDelete.id);
+      setGoalToDelete(null);
+      await loadData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteGoal'));
+      setGoalToDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -285,6 +306,7 @@ export const GoalListView: React.FC = () => {
                     <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
                       <button
                         id={`btn-edit-goal-${goal.id}`}
+                        type="button"
                         onClick={(e) => openEditModal(e, goal)}
                         aria-label={t('editGoalButton')}
                         title={t('editGoalButton')}
@@ -295,6 +317,7 @@ export const GoalListView: React.FC = () => {
                       {goal.status !== 'archived' && (
                         <button
                           id={`btn-archive-goal-${goal.id}`}
+                          type="button"
                           onClick={(e) => handleArchiveGoal(e, goal)}
                           aria-label={t('archiveGoalButton')}
                           title={t('archiveGoalButton')}
@@ -303,6 +326,21 @@ export const GoalListView: React.FC = () => {
                           <Archive className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      <button
+                        id={`btn-delete-goal-${goal.id}`}
+                        data-testid={`btn-delete-goal-${goal.id}`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActionError(null);
+                          setGoalToDelete(goal);
+                        }}
+                        aria-label={t('deleteGoalButton')}
+                        title={t('deleteGoalButton')}
+                        className="p-1 rounded text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -364,6 +402,67 @@ export const GoalListView: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={modalMode === 'create' ? handleCreateGoal : handleEditGoal}
       />
+
+      {/* Delete Goal Confirmation Modal */}
+      {goalToDelete && (
+        <div
+          id="delete-goal-modal-backdrop"
+          data-testid="delete-goal-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        >
+          <div
+            id="delete-goal-modal"
+            data-testid="delete-goal-modal"
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xl space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  {t('deleteGoalTitle')}
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {t('confirmDeleteGoalPrefix')}{' '}
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    "{goalToDelete.title}"
+                  </span>
+                  ?
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-2">
+                  {t('deleteGoalIntegrityNote')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <button
+                id="btn-cancel-delete-goal"
+                data-testid="btn-cancel-delete-goal"
+                type="button"
+                onClick={() => setGoalToDelete(null)}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                id="btn-confirm-delete-goal"
+                data-testid="btn-confirm-delete-goal"
+                type="button"
+                onClick={handleConfirmDeleteGoal}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? t('deleting') : t('confirmDeleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

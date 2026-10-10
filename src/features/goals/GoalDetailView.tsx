@@ -50,10 +50,18 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
   // Goal Edit Modal
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
+  // Goal Delete Confirmation Modal
+  const [isDeleteGoalModalOpen, setIsDeleteGoalModalOpen] = useState(false);
+  const [isDeletingGoal, setIsDeletingGoal] = useState(false);
+
   // Roadmap Modal
   const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
   const [roadmapModalMode, setRoadmapModalMode] = useState<'create' | 'edit'>('create');
   const [selectedRoadmap, setSelectedRoadmap] = useState<Roadmap | null>(null);
+
+  // Roadmap Delete Confirmation Modal
+  const [roadmapToDelete, setRoadmapToDelete] = useState<Roadmap | null>(null);
+  const [isDeletingRoadmap, setIsDeletingRoadmap] = useState(false);
 
   const loadGoalData = useCallback(async () => {
     try {
@@ -108,6 +116,22 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
     }
   };
 
+  const handleDeleteGoal = async () => {
+    if (!goal || isDeletingGoal) return;
+    try {
+      setIsDeletingGoal(true);
+      setActionError(null);
+      await application.goals.deleteGoal(goal.id);
+      setIsDeleteGoalModalOpen(false);
+      navigate('goals');
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : t('failedToDeleteGoal'));
+      setIsDeleteGoalModalOpen(false);
+    } finally {
+      setIsDeletingGoal(false);
+    }
+  };
+
   const handleCreateRoadmap = async (data: { title: string; description: string }) => {
     if (!goal) return;
     await application.roadmaps.createRoadmap({
@@ -127,18 +151,25 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
     await loadGoalData();
   };
 
-  const handleDeleteRoadmap = async (e: React.MouseEvent, roadmap: Roadmap) => {
+  const handleDeleteRoadmap = (e: React.MouseEvent, roadmap: Roadmap) => {
     e.stopPropagation();
-    if (!window.confirm(`${t('confirmDeleteRoadmapPrefix')} "${roadmap.title}"?`)) {
-      return;
-    }
+    setActionError(null);
+    setRoadmapToDelete(roadmap);
+  };
 
+  const handleConfirmDeleteRoadmap = async () => {
+    if (!roadmapToDelete || isDeletingRoadmap) return;
     try {
+      setIsDeletingRoadmap(true);
       setActionError(null);
-      await application.roadmaps.deleteRoadmap(roadmap.id);
+      await application.roadmaps.deleteRoadmap(roadmapToDelete.id);
+      setRoadmapToDelete(null);
       await loadGoalData();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : t('failedToDeleteRoadmap'));
+      setRoadmapToDelete(null);
+    } finally {
+      setIsDeletingRoadmap(false);
     }
   };
 
@@ -211,6 +242,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
         <div className="flex items-center gap-2">
           <button
             id="btn-edit-goal"
+            type="button"
             onClick={() => setIsGoalModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
           >
@@ -221,6 +253,7 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
           {goal.status !== 'archived' && (
             <button
               id="btn-archive-goal"
+              type="button"
               onClick={handleArchiveGoal}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 cursor-pointer transition"
             >
@@ -228,6 +261,20 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
               <span>{t('archiveGoalButton')}</span>
             </button>
           )}
+
+          <button
+            id="btn-delete-goal"
+            data-testid="btn-delete-goal"
+            type="button"
+            onClick={() => {
+              setActionError(null);
+              setIsDeleteGoalModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-rose-200 dark:border-rose-900 cursor-pointer transition"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{t('deleteGoalButton')}</span>
+          </button>
         </div>
       </div>
 
@@ -529,6 +576,128 @@ export const GoalDetailView: React.FC<GoalDetailViewProps> = ({ goalId }) => {
         onClose={() => setIsRoadmapModalOpen(false)}
         onSubmit={roadmapModalMode === 'create' ? handleCreateRoadmap : handleEditRoadmap}
       />
+
+      {/* Delete Goal Confirmation Modal */}
+      {isDeleteGoalModalOpen && (
+        <div
+          id="delete-goal-detail-modal-backdrop"
+          data-testid="delete-goal-detail-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        >
+          <div
+            id="delete-goal-detail-modal"
+            data-testid="delete-goal-detail-modal"
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xl space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  {t('deleteGoalTitle')}
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {t('confirmDeleteGoalPrefix')}{' '}
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    "{goal.title}"
+                  </span>
+                  ?
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-2">
+                  {t('deleteGoalIntegrityNote')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <button
+                id="btn-cancel-detail-delete-goal"
+                data-testid="btn-cancel-detail-delete-goal"
+                type="button"
+                onClick={() => setIsDeleteGoalModalOpen(false)}
+                disabled={isDeletingGoal}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                id="btn-confirm-detail-delete-goal"
+                data-testid="btn-confirm-detail-delete-goal"
+                type="button"
+                onClick={handleDeleteGoal}
+                disabled={isDeletingGoal}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingGoal ? t('deleting') : t('confirmDeleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Roadmap Confirmation Modal */}
+      {roadmapToDelete && (
+        <div
+          id="delete-roadmap-modal-backdrop"
+          data-testid="delete-roadmap-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+        >
+          <div
+            id="delete-roadmap-modal"
+            data-testid="delete-roadmap-modal"
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xl space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                  {t('deleteRoadmapTitle')}
+                </h3>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {t('confirmDeleteRoadmapPrefix')}{' '}
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    "{roadmapToDelete.title}"
+                  </span>
+                  ?
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-2">
+                  {t('deleteRoadmapIntegrityNote')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <button
+                id="btn-cancel-delete-roadmap"
+                data-testid="btn-cancel-delete-roadmap"
+                type="button"
+                onClick={() => setRoadmapToDelete(null)}
+                disabled={isDeletingRoadmap}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                id="btn-confirm-delete-roadmap"
+                data-testid="btn-confirm-delete-roadmap"
+                type="button"
+                onClick={handleConfirmDeleteRoadmap}
+                disabled={isDeletingRoadmap}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+              >
+                {isDeletingRoadmap ? t('deleting') : t('confirmDeleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

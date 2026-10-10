@@ -226,3 +226,69 @@ test('Print/Export Consistency: ReportService outputs deterministic model consum
   assert.ok(report.weeklyPlanning);
   assert.ok(report.dailyActivity.length === 7);
 });
+
+// -----------------------------------------------------------------------------
+// 6. Bundled Typography & Print/PDF Stylesheet Integrity
+// -----------------------------------------------------------------------------
+
+test('Print/Export Typography & Stylesheet: Bundled Vazirmatn fonts and @media print rules exist', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+
+  const regularFontPath = path.resolve(process.cwd(), 'src/assets/fonts/Vazirmatn-Regular.woff2');
+  const boldFontPath = path.resolve(process.cwd(), 'src/assets/fonts/Vazirmatn-Bold.woff2');
+  const cssPath = path.resolve(process.cwd(), 'src/index.css');
+
+  assert.ok(fs.existsSync(regularFontPath), 'Bundled Vazirmatn-Regular.woff2 must exist');
+  assert.ok(fs.existsSync(boldFontPath), 'Bundled Vazirmatn-Bold.woff2 must exist');
+  assert.ok(fs.statSync(regularFontPath).size > 10000, 'Regular font file must be non-empty');
+  assert.ok(fs.statSync(boldFontPath).size > 10000, 'Bold font file must be non-empty');
+
+  const cssContent = fs.readFileSync(cssPath, 'utf8');
+  assert.ok(cssContent.includes("font-family: 'Vazirmatn'"), 'index.css must declare Vazirmatn @font-face');
+  assert.ok(cssContent.includes('@media print'), 'index.css must include @media print rules');
+  assert.ok(cssContent.includes('thead'), 'index.css must configure table header group for multi-page print');
+});
+
+test('Print/Export Regression: Executive Summary (ReportOverviewSection) enforces high-contrast print & theme styles', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+
+  const overviewPath = path.resolve(
+    process.cwd(),
+    'src/features/reports/ReportOverviewSection.tsx'
+  );
+  const cssPath = path.resolve(process.cwd(), 'src/index.css');
+
+  const overviewSource = fs.readFileSync(overviewPath, 'utf8');
+  const cssContent = fs.readFileSync(cssPath, 'utf8');
+
+  // Must not use non-existent Tailwind token neutral-850 which leaves light bg-neutral-50/50 active in dark mode
+  assert.ok(
+    !overviewSource.includes('neutral-850'),
+    'ReportOverviewSection must not use invalid neutral-850 token'
+  );
+
+  // Must include explicit print contrast utilities and semantic hooks for cards, labels, values, and subvalues
+  assert.ok(overviewSource.includes('report-metric-card'), 'Must include report-metric-card class');
+  assert.ok(overviewSource.includes('report-metric-label'), 'Must include report-metric-label class');
+  assert.ok(overviewSource.includes('report-metric-value'), 'Must include report-metric-value class');
+  assert.ok(overviewSource.includes('report-metric-subvalue'), 'Must include report-metric-subvalue class');
+  assert.ok(overviewSource.includes('print:bg-white'), 'Must enforce white card background in print');
+  assert.ok(overviewSource.includes('print:border-neutral-400'), 'Must enforce visible card border in print');
+  assert.ok(overviewSource.includes('print:text-neutral-950'), 'Must enforce high-contrast primary value text in print');
+
+  // Verify @media print stylesheet enforces !important contrast on metric cards and their descendants
+  assert.ok(
+    cssContent.includes('#official-report-document .report-metric-card *'),
+    'index.css must enforce high-contrast text color on all report-metric-card descendants in @media print'
+  );
+  assert.ok(
+    cssContent.includes('#official-report-document .report-metric-label'),
+    'index.css must explicitly style report-metric-label in @media print'
+  );
+  assert.ok(
+    cssContent.includes('#official-report-document .report-metric-value'),
+    'index.css must explicitly style report-metric-value in @media print'
+  );
+});

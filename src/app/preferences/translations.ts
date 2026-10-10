@@ -896,6 +896,13 @@ export const TRANSLATIONS = {
     deleteSessionConfirmQuestion: 'Delete this recorded session?',
     deleteSessionCannotUndo: 'This action cannot be undone.',
     failedToDeleteSession: 'Failed to delete session.',
+    deleteGoalButton: 'Delete Goal',
+    deleteGoalTitle: 'Delete Goal',
+    confirmDeleteGoalPrefix: 'Are you sure you want to delete',
+    deleteGoalIntegrityNote: 'This operation strictly respects historical integrity. Goals with attached roadmaps cannot be deleted.',
+    failedToDeleteGoal: 'Failed to delete goal.',
+    deleteRoadmapTitle: 'Delete Roadmap',
+    deleteRoadmapIntegrityNote: 'This operation strictly respects historical integrity. Roadmaps with attached tasks cannot be deleted.',
   },
   fa: {
     settingsTitle: 'تنظیمات و ترجیحات کاربر',
@@ -1788,6 +1795,13 @@ export const TRANSLATIONS = {
     deleteSessionConfirmQuestion: 'این جلسه ثبت‌شده حذف شود؟',
     deleteSessionCannotUndo: 'این عملیات قابل بازگشت نیست.',
     failedToDeleteSession: 'حذف جلسه با خطا مواجه شد.',
+    deleteGoalButton: 'حذف هدف',
+    deleteGoalTitle: 'حذف هدف',
+    confirmDeleteGoalPrefix: 'آیا از حذف این هدف اطمینان دارید:',
+    deleteGoalIntegrityNote: 'این عملیات یکپارچگی سوابق را حفظ می‌کند. اهداف دارای نقشه راه متصل قابل حذف نیستند.',
+    failedToDeleteGoal: 'حذف هدف با خطا مواجه شد.',
+    deleteRoadmapTitle: 'حذف نقشه راه',
+    deleteRoadmapIntegrityNote: 'این عملیات یکپارچگی سوابق را حفظ می‌کند. نقشه‌های راه دارای وظایف متصل قابل حذف نیستند.',
   },
 } as const;
 

@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   generateEntityId,
@@ -12,10 +14,13 @@ import {
 import {
   createApplicationServices,
   ApplicationServices,
+  GoalService,
   ValidationError,
   NotFoundError,
   DependencyConstraintError,
+  ApplicationPersistenceError,
 } from '../../src/application';
+import { createDurableSyncOutbox, createSyncRecordingRepositories } from '../../src/sync';
 import { parseHashToState } from '../../src/app/providers/RouterProvider';
 
 function setupServices(): { services: ApplicationServices; db: PathFlowDB } {
@@ -295,3 +300,129 @@ test('Vertical Slice: Zero-dependency router path and param parsing', () => {
     hashString: 'dashboard',
   });
 });
+
+test('Regression: Goal deletion flow persists to IndexedDB, records outbox mutation, preserves related records, and surfaces errors', async () => {
+  const dbName = `test-goal-delete-reg-${generateEntityId()}`;
+  const db = new PathFlowDB(dbName);
+  const rawRepos = createLocalRepositories(db);
+  const outbox = createDurableSyncOutbox(`test-outbox-${generateEntityId()}`);
+  const syncRepos = createSyncRecordingRepositories({
+    repositories: rawRepos,
+    outbox,
+    getDeviceId: () => 'device-test-1',
+  });
+  const services = createApplicationServices(syncRepos);
+
+  // 1. Create two goals
+  const goalWithDeps = await services.goals.createGoal({
+    title: 'Goal With Attached Roadmap',
+    description: 'Should be protected from accidental deletion',
+  });
+  const standaloneGoal = await services.goals.createGoal({
+    title: 'Standalone Goal To Delete',
+    description: 'Can be deleted directly',
+  });
+
+  const roadmap = await services.roadmaps.createRoadmap({
+    goalId: goalWithDeps.id,
+    title: 'Dependent Roadmap',
+  });
+  const task = await services.tasks.createTask({
+    roadmapId: roadmap.id,
+    title: 'Dependent Task',
+    estimatedMinutes: 60,
+  });
+
+  // 2. Deleting standaloneGoal succeeds, removes it from IndexedDB, and records delete mutation in outbox
+  await services.goals.deleteGoal(standaloneGoal.id);
+
+  const remainingGoals = await services.goals.listGoals();
+  assert.equal(remainingGoals.length, 1);
+  assert.equal(remainingGoals[0].id, goalWithDeps.id);
+
+  const rawDeletedLookup = await db.goals.get(standaloneGoal.id);
+  assert.equal(rawDeletedLookup, undefined, 'Deleted goal must be removed from IndexedDB storage');
+
+  const outboxItems = await outbox.getAll();
+  const deleteMutation = outboxItems.find(
+    (item) => item.mutation.entityType === 'goal' && item.mutation.operation === 'delete' && item.mutation.entityId === standaloneGoal.id
+  );
+  assert.ok(deleteMutation, 'Goal deletion must be recorded in sync outbox');
+
+  // 3. Attempting to delete goalWithDeps throws DependencyConstraintError and does NOT cascade-delete roadmap or task
+  await assert.rejects(
+    async () => {
+      await services.goals.deleteGoal(goalWithDeps.id);
+    },
+    (err: unknown) => err instanceof DependencyConstraintError
+  );
+
+  const preservedGoal = await db.goals.get(goalWithDeps.id);
+  assert.ok(preservedGoal, 'Goal with roadmap must remain in IndexedDB');
+  const preservedRoadmap = await db.roadmaps.get(roadmap.id);
+  assert.ok(preservedRoadmap, 'Dependent roadmap must not be cascade-deleted');
+  const preservedTask = await db.tasks.get(task.id);
+  assert.ok(preservedTask, 'Dependent task must not be cascade-deleted');
+
+  // 4. Repository failure during deletion is surfaced as ApplicationPersistenceError (never swallowed)
+  const failingGoalService = new GoalService(
+    {
+      create: (g) => rawRepos.goals.create(g),
+      getById: (id) => rawRepos.goals.getById(id),
+      getAll: () => rawRepos.goals.getAll(),
+      update: (g) => rawRepos.goals.update(g),
+      delete: async () => {
+        throw new Error('Simulated IndexedDB delete failure');
+      },
+    },
+    rawRepos.roadmaps
+  );
+
+  const deletableGoal = await services.goals.createGoal({ title: 'Goal For Failure Test' });
+  await assert.rejects(
+    async () => {
+      await failingGoalService.deleteGoal(deletableGoal.id);
+    },
+    (err: unknown) => {
+      assert.ok(err instanceof ApplicationPersistenceError);
+      assert.match((err as Error).message, /Simulated IndexedDB delete failure/);
+      return true;
+    }
+  );
+
+  // 5. Verify UI components wire deleteGoal and confirmation modals in GoalListView and GoalDetailView
+  const goalListViewSource = fs.readFileSync(
+    path.resolve(process.cwd(), 'src/features/goals/GoalListView.tsx'),
+    'utf-8'
+  );
+  assert.ok(
+    goalListViewSource.includes('application.goals.deleteGoal(goalToDelete.id)'),
+    'GoalListView must invoke application.goals.deleteGoal'
+  );
+  assert.ok(
+    goalListViewSource.includes('btn-delete-goal-${goal.id}') &&
+      goalListViewSource.includes('btn-confirm-delete-goal'),
+    'GoalListView must render delete button and confirmation modal controls'
+  );
+
+  const goalDetailViewSource = fs.readFileSync(
+    path.resolve(process.cwd(), 'src/features/goals/GoalDetailView.tsx'),
+    'utf-8'
+  );
+  assert.ok(
+    goalDetailViewSource.includes('application.goals.deleteGoal(goal.id)'),
+    'GoalDetailView must invoke application.goals.deleteGoal'
+  );
+  assert.ok(
+    goalDetailViewSource.includes('id="btn-delete-goal"') &&
+      goalDetailViewSource.includes('id="btn-confirm-detail-delete-goal"'),
+    'GoalDetailView must render delete goal button and confirmation modal controls'
+  );
+  assert.ok(
+    !goalDetailViewSource.includes('window.confirm'),
+    'GoalDetailView must use in-app confirmation modal instead of window.confirm'
+  );
+
+  await db.close();
+});
+

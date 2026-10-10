@@ -129,9 +129,64 @@ export const ReportsView: React.FC = () => {
     generateReport();
   }, [generateReport]);
 
+  // Ensure clean light-paper rendering and descriptive PDF filename during browser print
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    let wasDarkBeforePrint = false;
+    let previousTitle = document.title;
+
+    const onBeforePrint = () => {
+      previousTitle = document.title;
+      if (report) {
+        const { startDate, endDate } = report.metadata.reviewPeriod;
+        document.title = `PathFlow-Report-${startDate}-to-${endDate}`;
+      }
+      if (document.documentElement.classList.contains('dark')) {
+        wasDarkBeforePrint = true;
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    const onAfterPrint = () => {
+      if (previousTitle) {
+        document.title = previousTitle;
+      }
+      if (wasDarkBeforePrint || preferences.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        wasDarkBeforePrint = false;
+      }
+    };
+
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+  }, [report, preferences.theme]);
+
   const handlePrint = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const wasDark = document.documentElement.classList.contains('dark');
+    const previousTitle = document.title;
+
+    if (report) {
+      const { startDate, endDate } = report.metadata.reviewPeriod;
+      document.title = `PathFlow-Report-${startDate}-to-${endDate}`;
+    }
+    if (wasDark) {
+      document.documentElement.classList.remove('dark');
+    }
+
+    try {
       window.print();
+    } finally {
+      document.title = previousTitle;
+      if (wasDark || preferences.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
     }
   };
 
@@ -241,7 +296,9 @@ export const ReportsView: React.FC = () => {
                   onChange={(e) => setCustomStartDate(e.target.value)}
                   className="px-2.5 py-1 text-xs border border-neutral-300 dark:border-neutral-700 rounded bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                 />
-                <span className="text-neutral-500 text-xs">→</span>
+                <span className="text-neutral-500 text-xs">
+                  {preferences.language === 'fa' ? '←' : '→'}
+                </span>
                 <input
                   type="date"
                   value={customEndDate}
@@ -347,7 +404,7 @@ export const ReportsView: React.FC = () => {
           <button
             type="button"
             onClick={generateReport}
-            className="ml-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
+            className="ms-auto underline hover:no-underline text-xs font-semibold cursor-pointer"
           >
             {t('retry')}
           </button>
@@ -385,16 +442,21 @@ export const ReportsView: React.FC = () => {
           <ReportDailyActivitySection dailyActivity={report.dailyActivity} />
 
           {/* Official Document Footer */}
-          <footer className="pt-6 mt-8 border-t border-neutral-300 dark:border-neutral-800 text-[11px] text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <footer className="print-avoid-break pt-6 mt-8 border-t border-neutral-300 dark:border-neutral-800 text-[11px] text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{t('verificationNotice')}</span>
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-right">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 text-center sm:text-end tabular-nums">
               <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                {t('printFooterNotice')} • {t('generatedAt')}: {formatDate(report.metadata.generatedAt, { year: 'numeric', month: 'short', day: 'numeric' })}
+                {t('printFooterNotice')} • {t('generatedAt')}:{' '}
+                {formatDate(report.metadata.generatedAt, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </span>
-              <span className="font-mono text-neutral-400">
+              <span className="text-neutral-400">
                 {t('deterministicRecordNotice')}
               </span>
             </div>

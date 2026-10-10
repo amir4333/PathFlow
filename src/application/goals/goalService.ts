@@ -124,7 +124,12 @@ export class GoalService {
     await this.getGoal(id);
 
     if (this.roadmapRepo) {
-      const roadmaps = await this.roadmapRepo.getByGoalId(id);
+      let roadmaps;
+      try {
+        roadmaps = await this.roadmapRepo.getByGoalId(id);
+      } catch (err) {
+        handleRepositoryError(err, `Failed to check dependent Roadmaps for Goal "${id}".`);
+      }
       if (roadmaps.length > 0) {
         throw new DependencyConstraintError(
           `Cannot delete Goal "${id}" because it still contains ${roadmaps.length} active Roadmap(s). Remove or reassign Roadmaps first.`

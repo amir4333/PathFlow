@@ -2,6 +2,66 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ==========================================================================
+   Bundled Typography: Vazirmatn (Persian / Arabic / Latin)
+   Regular (400/500) & Bold (600/700) — Self-hosted for Offline & PDF fidelity
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Vazirmatn', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Vazirmatn', monospace;
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "kern" 1, "liga" 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ensure Persian/RTL text inside font-mono elements uses Vazirmatn with tabular numerals
+   rather than falling back to disconnected system monospace Arabic glyphs */
+[dir="rtl"] .font-mono {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
    Phase 13B: Official Report Print & PDF Export Stylesheet
    ========================================================================== */
 
@@ -14,25 +74,31 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 12mm 14mm;
   }
 
+  :root,
   html,
+  html.dark,
   body {
+    color-scheme: light !important;
     background-color: #ffffff !important;
     background: #ffffff !important;
-    color: #171717 !important;
-    font-size: 10pt !important;
-    line-height: 1.4 !important;
+    color: #111827 !important;
+    font-family: var(--font-sans) !important;
+    font-size: 9.5pt !important;
+    line-height: 1.45 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   #pathflow-app-root {
     background: #ffffff !important;
-    color: #171717 !important;
+    color: #111827 !important;
     min-height: auto !important;
+    height: auto !important;
     display: block !important;
+    overflow: visible !important;
   }
 
   /* Visibility Toggles */
@@ -64,6 +130,7 @@
 
   #reports-view-root {
     max-width: 100% !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
@@ -75,14 +142,91 @@
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    width: 100% !important;
   }
 
-  /* Section & Card Page-Break Control */
-  section,
-  table,
-  article > section,
-  .print-avoid-break {
+  /* Force light-paper readability inside the report even if dark mode was active on screen */
+  #official-report-document,
+  #official-report-document h1,
+  #official-report-document h2,
+  #official-report-document h3,
+  #official-report-document h4,
+  #official-report-document th,
+  #official-report-document td {
+    color: #111827 !important;
+  }
+
+  #official-report-document p,
+  #official-report-document span,
+  #official-report-document div,
+  #official-report-document footer {
+    color: #111827 !important;
+  }
+
+  #official-report-document .report-section-header {
+    border-bottom-color: #94a3b8 !important;
+    color: #0f172a !important;
+  }
+
+  #official-report-document .report-metric-card,
+  #official-report-document .report-meta-box {
+    background-color: #ffffff !important;
+    border: 1px solid #94a3b8 !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #official-report-document .report-metric-card *,
+  #official-report-document .report-meta-box * {
+    color: #0f172a !important;
+  }
+
+  #official-report-document .report-metric-label,
+  #official-report-document .report-metric-label *,
+  #official-report-document .report-metric-subvalue,
+  #official-report-document .report-overview-ratio {
+    color: #1e293b !important;
+  }
+
+  #official-report-document .report-metric-value {
+    color: #0f172a !important;
+  }
+
+  #official-report-document .report-status-badge {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+  }
+
+  /* Section & Card Page-Break Control:
+     Allow multi-row sections and tables to paginate across pages cleanly,
+     while preventing breaks inside headers, metric cards, individual rows, and footers. */
+  #official-report-document > section {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    margin-bottom: 14pt !important;
+  }
+
+  #report-metadata-header,
+  #report-overview-section,
+  .report-metric-card,
+  .print-avoid-break,
+  #official-report-document > footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .report-section-header {
+    color: #0f172a !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -100,45 +244,69 @@
     display: table-footer-group !important;
   }
 
-  /* Table readability in print */
+  /* Table readability & pagination in print */
   .overflow-x-auto {
     overflow: visible !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
   }
 
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    background-color: #ffffff !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  thead tr {
+    background-color: #f1f5f9 !important;
+    border-bottom: 1.5px solid #94a3b8 !important;
+  }
+
+  tbody tr {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
   }
 
   th,
   td {
-    border-color: #e5e5e5 !important;
-    color: #171717 !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+    border-color: #cbd5e1 !important;
+    color: #111827 !important;
+    padding: 5px 7px !important;
+    vertical-align: top !important;
   }
 
-  /* Typography & contrast preservation */
-  h1, h2, h3, h4 {
-    color: #000000 !important;
-    break-after: avoid !important;
-    page-break-after: avoid !important;
+  th {
+    font-weight: 700 !important;
+    color: #0f172a !important;
   }
 
-  p, span, div {
+  /* Prevent clipping/truncation of notes and descriptions in print/PDF */
+  #official-report-document .truncate,
+  #official-report-document .line-clamp-1 {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    display: block !important;
+  }
+
+  p,
+  span,
+  div {
     orphans: 3;
     widows: 3;
   }
 
-  /* RTL / LTR preservation */
+  /* RTL / LTR direction preservation */
   [dir="rtl"] {
     direction: rtl !important;
-    text-align: right !important;
   }
 
   [dir="ltr"] {
     direction: ltr !important;
-    text-align: left !important;
   }
 }
