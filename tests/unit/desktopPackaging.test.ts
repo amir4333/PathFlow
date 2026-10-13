@@ -31,6 +31,11 @@ test('Desktop Packaging: package.json metadata and electron-builder configuratio
   const winTargets = build.win.target.map((t: any) => (typeof t === 'string' ? t : t.target));
   assert.ok(winTargets.includes('nsis'), 'Windows target must include nsis');
   assert.ok(winTargets.includes('portable'), 'Windows target must include portable');
+  assert.equal(
+    build.win.icon,
+    'electron/assets/icon.png',
+    'Windows packaging icon must point directly to tracked electron/assets/icon.png'
+  );
 
   // NSIS installer properties
   const nsis = build.nsis;
@@ -45,11 +50,12 @@ test('Desktop Packaging: package.json metadata and electron-builder configuratio
 test('Desktop Packaging: Electron source files and icon assets exist', () => {
   const mainTs = path.join(projectRoot, 'electron/main.ts');
   const preloadTs = path.join(projectRoot, 'electron/preload.ts');
-  const iconPng = path.join(projectRoot, 'build/icon.png');
+  const trackedIcon = path.join(projectRoot, 'electron/assets/icon.png');
 
   assert.ok(fs.existsSync(mainTs), 'electron/main.ts must exist');
   assert.ok(fs.existsSync(preloadTs), 'electron/preload.ts must exist');
-  assert.ok(fs.existsSync(iconPng), 'build/icon.png must exist');
+  assert.ok(fs.existsSync(trackedIcon), 'electron/assets/icon.png must exist');
+  assert.ok(fs.statSync(trackedIcon).size > 0, 'electron/assets/icon.png must not be empty');
 
   // Verify security settings in main.ts
   const mainContent = fs.readFileSync(mainTs, 'utf8');
@@ -70,4 +76,41 @@ test('Desktop Packaging: Vite config uses relative base for packaged asset resol
 
   const content = fs.readFileSync(viteConfigPath, 'utf8');
   assert.match(content, /base:\s*['"]\.\/['"]/, 'vite.config.ts must specify base: "./"');
+});
+
+test('Desktop Packaging Regression: Packaging icon resolution succeeds without pre-existing build/icon.png', () => {
+  const pkgPath = path.join(projectRoot, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+  const iconConfig = pkg.build?.win?.icon;
+  assert.notEqual(
+    iconConfig,
+    'build/icon.png',
+    'Windows packaging icon must not point to gitignored build/icon.png'
+  );
+  assert.equal(
+    iconConfig,
+    'electron/assets/icon.png',
+    'Windows packaging icon must point directly to tracked electron/assets/icon.png'
+  );
+
+  // Ensure gitignored build/icon.png does not exist in a clean clone and is not required
+  const legacyIconPath = path.join(projectRoot, 'build/icon.png');
+  assert.equal(
+    fs.existsSync(legacyIconPath),
+    false,
+    'Clean clone should not require or contain gitignored build/icon.png'
+  );
+
+  // Verify that the configured icon path resolves to a valid, readable PNG file
+  const resolvedIconPath = path.join(projectRoot, iconConfig);
+  assert.ok(fs.existsSync(resolvedIconPath), 'Resolved icon must exist on disk');
+
+  const iconBuffer = fs.readFileSync(resolvedIconPath);
+  assert.ok(iconBuffer.length >= 8, 'Icon file must contain at least 8 header bytes');
+  // PNG Magic Number: 0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A
+  assert.equal(iconBuffer[0], 0x89, 'Byte 0 must match PNG header');
+  assert.equal(iconBuffer[1], 0x50, 'Byte 1 must match PNG header (P)');
+  assert.equal(iconBuffer[2], 0x4e, 'Byte 2 must match PNG header (N)');
+  assert.equal(iconBuffer[3], 0x47, 'Byte 3 must match PNG header (G)');
 });

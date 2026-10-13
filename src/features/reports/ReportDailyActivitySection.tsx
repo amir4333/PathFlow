@@ -69,7 +69,7 @@ export const ReportDailyActivitySection: React.FC<ReportDailyActivitySectionProp
                 return (
                   <tr
                     key={day.date}
-                    className={`hover:bg-neutral-50/50 dark:hover:bg-neutral-850/50 ${
+                    className={`hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 ${
                       hasActivity ? 'bg-white dark:bg-neutral-900' : 'bg-neutral-50/30 dark:bg-neutral-900/30 opacity-75 print:opacity-100'
                     }`}
                   >

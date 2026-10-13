@@ -250,6 +250,7 @@ export const WeeklyPlansView: React.FC = () => {
     } catch (err: unknown) {
       console.error('Failed to remove item', err);
       setActionError(err instanceof Error ? err.message : 'Failed to remove plan item.');
+      setItemToDelete(null);
     } finally {
       setIsDeleting(false);
     }

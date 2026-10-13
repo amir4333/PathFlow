@@ -164,7 +164,12 @@ export class RoadmapService {
     await this.getRoadmap(id);
 
     if (this.taskRepo) {
-      const dependentTasks = await this.taskRepo.getByRoadmapId(id);
+      let dependentTasks;
+      try {
+        dependentTasks = await this.taskRepo.getByRoadmapId(id);
+      } catch (err) {
+        handleRepositoryError(err, `Failed to check dependent Tasks for Roadmap "${id}".`);
+      }
       if (dependentTasks.length > 0) {
         throw new DependencyConstraintError(
           `Cannot delete Roadmap "${id}" because it still contains ${dependentTasks.length} Task(s). Remove or reassign Tasks first.`

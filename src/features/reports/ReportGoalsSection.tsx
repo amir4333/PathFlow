@@ -50,7 +50,7 @@ export const ReportGoalsSection: React.FC<ReportGoalsSectionProps> = ({ goals })
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {goals.map((g) => (
-                <tr key={g.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/50">
+                <tr key={g.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                   <td className="py-2.5 px-3 text-start">
                     <div className="font-semibold text-neutral-900 dark:text-neutral-100">
                       {g.title}

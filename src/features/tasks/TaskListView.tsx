@@ -95,6 +95,7 @@ export const TaskListView: React.FC = () => {
         await loadData();
       } catch (err: unknown) {
         setActionError(err instanceof Error ? err.message : t('failedToUpdateTask'));
+        throw err;
       }
     }
   };
@@ -109,6 +110,7 @@ export const TaskListView: React.FC = () => {
       await loadData();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : t('failedToDeleteTask'));
+      setTaskToDelete(null);
     } finally {
       setIsDeleting(false);
     }

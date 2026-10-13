@@ -121,6 +121,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId }) => {
       await loadTaskData();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : t('failedToUpdateTask'));
+      throw err;
     }
   };
 

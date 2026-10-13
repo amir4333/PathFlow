@@ -229,14 +229,22 @@ export class TaskService {
 
     let sessionCount = 0;
     if (this.sessionRepo) {
-      const sessions = await this.sessionRepo.getByTaskId(id);
-      sessionCount = sessions.length;
+      try {
+        const sessions = await this.sessionRepo.getByTaskId(id);
+        sessionCount = sessions.length;
+      } catch (err) {
+        handleRepositoryError(err, `Failed to check dependent Sessions for Task "${id}".`);
+      }
     }
 
     let planItemCount = 0;
     if (this.weeklyPlanItemRepo) {
-      const planItems = await this.weeklyPlanItemRepo.getByTaskId(id);
-      planItemCount = planItems.length;
+      try {
+        const planItems = await this.weeklyPlanItemRepo.getByTaskId(id);
+        planItemCount = planItems.length;
+      } catch (err) {
+        handleRepositoryError(err, `Failed to check dependent Weekly Plan items for Task "${id}".`);
+      }
     }
 
     if (sessionCount > 0 || planItemCount > 0) {

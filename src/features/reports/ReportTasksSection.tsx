@@ -50,7 +50,7 @@ export const ReportTasksSection: React.FC<ReportTasksSectionProps> = ({ tasks })
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {tasks.map((task) => (
-                <tr key={task.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/50">
+                <tr key={task.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                   <td className="py-2.5 px-3 text-start font-semibold text-neutral-900 dark:text-neutral-100">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span>{task.title}</span>

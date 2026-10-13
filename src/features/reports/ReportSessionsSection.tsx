@@ -45,7 +45,7 @@ export const ReportSessionsSection: React.FC<ReportSessionsSectionProps> = ({ se
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {sessionsSummary.recentSessions.map((session) => (
-                <tr key={session.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/50">
+                <tr key={session.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                   <td className="py-2.5 px-3 text-start tabular-nums text-neutral-700 dark:text-neutral-300">
                     {formatDate(session.startedAt, {
                       month: 'short',

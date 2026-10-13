@@ -53,7 +53,7 @@ export const ReportWeeklyPlanningSection: React.FC<ReportWeeklyPlanningSectionPr
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
               {weeklyPlanning.commitments.map((item) => (
-                <tr key={item.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/50">
+                <tr key={item.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
                   <td className="py-2.5 px-3 text-start font-semibold text-neutral-900 dark:text-neutral-100">
                     {item.taskTitle === 'Unknown Task' ? t('unknownTask') : item.taskTitle}
                   </td>

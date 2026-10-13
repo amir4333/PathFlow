@@ -46,7 +46,7 @@
           ]
         }
       ],
-      "icon": "build/icon.png"
+      "icon": "electron/assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
