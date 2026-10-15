@@ -53,6 +53,8 @@ export const ReportsView: React.FC = () => {
   const [selectedGoalId, setSelectedGoalId] = useState<string>(() => params.goalId || '');
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string>(() => params.roadmapId || '');
 
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
   // Available options for scope dropdowns
   const [availableGoals, setAvailableGoals] = useState<Goal[]>([]);
   const [availableRoadmaps, setAvailableRoadmaps] = useState<Roadmap[]>([]);
@@ -190,6 +192,29 @@ export const ReportsView: React.FC = () => {
     }
   };
 
+  const handleSavePdf = async () => {
+    if (!report) return;
+
+    const { startDate, endDate } = report.metadata.reviewPeriod;
+    const fileName = `PathFlow-Report-${startDate}-to-${endDate}.pdf`;
+
+    try {
+      const result = await window.pathflowPdf.save(fileName);
+
+      if (result.success) {
+        console.info('PDF saved:', result.filePath);
+      } else if (result.canceled) {
+        return;
+      } else {
+        console.error('PDF save failed:', result.error);
+      }
+    } catch (error) {
+      console.error('PDF save failed:', error);
+    } finally {
+      setIsExportMenuOpen(false);
+    }
+  };
+
   return (
     <div id="reports-view-root" className="space-y-6 max-w-5xl mx-auto pb-16">
       {/* Controls & Configuration Bar (Hidden in Print) */}
@@ -209,27 +234,53 @@ export const ReportsView: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              id="btn-print-report"
-              onClick={handlePrint}
-              disabled={isLoading || !report}
-              aria-label={t('printAction')}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
-            >
-              <Printer className="w-4 h-4" />
-              <span>{t('printAction')}</span>
-            </button>
-            <button
-              id="btn-save-as-pdf"
-              onClick={handlePrint}
-              disabled={isLoading || !report}
-              aria-label={t('saveAsPdf')}
-              title={t('printHelpText')}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>{t('saveAsPdf')}</span>
-            </button>
+            <div className="relative">
+              <button
+                id="btn-report-export-menu"
+                type="button"
+                onClick={() => setIsExportMenuOpen((open) => !open)}
+                disabled={isLoading || !report}
+                aria-expanded={isExportMenuOpen}
+                aria-haspopup="menu"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
+              >
+                <FileText className="w-4 h-4" />
+                <span>{t('printAction')} / {t('saveAsPdf')}</span>
+              </button>
+
+              {isExportMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute end-0 top-full mt-2 z-50 min-w-48 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-1 shadow-lg"
+                >
+                  <button
+                    id="btn-print-report"
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handlePrint();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-neutral-800 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>{t('printAction')}</span>
+                  </button>
+
+                  <button
+                    id="btn-save-as-pdf"
+                    type="button"
+                    role="menuitem"
+                    onClick={handleSavePdf}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-neutral-800 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    <span>{t('saveAsPdf')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               id="btn-refresh-report"
               onClick={generateReport}
@@ -255,33 +306,30 @@ export const ReportsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPeriodType('this-week')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  periodType === 'this-week'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${periodType === 'this-week'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('thisWeek')}
               </button>
               <button
                 type="button"
                 onClick={() => setPeriodType('last-week')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  periodType === 'last-week'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${periodType === 'last-week'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('lastWeek')}
               </button>
               <button
                 type="button"
                 onClick={() => setPeriodType('custom')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  periodType === 'custom'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${periodType === 'custom'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('customRange')}
               </button>
@@ -319,33 +367,30 @@ export const ReportsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setScopeType('all')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  scopeType === 'all'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${scopeType === 'all'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('scopeAll')}
               </button>
               <button
                 type="button"
                 onClick={() => setScopeType('goal')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  scopeType === 'goal'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${scopeType === 'goal'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('scopeGoal')}
               </button>
               <button
                 type="button"
                 onClick={() => setScopeType('roadmap')}
-                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${
-                  scopeType === 'roadmap'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
-                }`}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors ${scopeType === 'roadmap'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  }`}
               >
                 {t('scopeRoadmap')}
               </button>

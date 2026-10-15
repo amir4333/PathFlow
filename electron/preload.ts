@@ -1,3 +1,4 @@
+
 /**
  * PathFlow Electron Preload Script
  *
@@ -7,6 +8,9 @@
  * - Preserves standard browser sandbox isolation for IndexedDB, localStorage, and Web APIs.
  */
 
-window.addEventListener('DOMContentLoaded', () => {
-  // Empty secure preload; standard Web APIs operate untouched.
+import { contextBridge, ipcRenderer } from 'electron';
+
+contextBridge.exposeInMainWorld('pathflowPdf', {
+  save: (fileName: string) =>
+    ipcRenderer.invoke('pathflow:save-report-pdf', fileName),
 });

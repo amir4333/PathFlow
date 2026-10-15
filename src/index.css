@@ -92,6 +92,12 @@ body {
     print-color-adjust: exact !important;
   }
 
+  #root {
+    background: #ffffff !important;
+    color: #111827 !important;
+    min-height: auto !important;
+  }
+
   #pathflow-app-root {
     background: #ffffff !important;
     color: #111827 !important;
@@ -204,7 +210,7 @@ body {
   /* Section & Card Page-Break Control:
      Allow multi-row sections and tables to paginate across pages cleanly,
      while preventing breaks inside headers, metric cards, individual rows, and footers. */
-  #official-report-document > section {
+  #official-report-document>section {
     break-inside: auto !important;
     page-break-inside: auto !important;
     margin-bottom: 14pt !important;
@@ -214,7 +220,7 @@ body {
   #report-overview-section,
   .report-metric-card,
   .print-avoid-break,
-  #official-report-document > footer {
+  #official-report-document>footer {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }

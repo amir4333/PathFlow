@@ -1,9 +1,44 @@
-import { app, BrowserWindow, shell } from 'electron';
+﻿import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import path from 'path';
+import { writeFile } from 'fs/promises';
 
 const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
 let mainWindow: BrowserWindow | null = null;
+
+ipcMain.handle('pathflow:save-report-pdf', async (event, fileName: string) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) {
+    throw new Error('Unauthorized PDF save request');
+  }
+
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Save report as PDF',
+    defaultPath: fileName,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+  });
+
+  if (canceled || !filePath) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const pdf = await mainWindow.webContents.printToPDF({
+      pageSize: 'A4',
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+
+    await writeFile(filePath, pdf);
+
+    return { success: true, filePath };
+  } catch (error) {
+    console.error('Failed to save report as PDF:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown PDF save error',
+    };
+  }
+});
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -12,7 +47,7 @@ function createWindow(): void {
     height: 800,
     minWidth: 1024,
     minHeight: 700,
-    backgroundColor: '#090d16',
+    backgroundColor: '#ffffff',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -90,3 +125,4 @@ if (!gotTheLock) {
     }
   });
 }
+

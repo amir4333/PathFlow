@@ -83,7 +83,7 @@
     "concurrently": "^10.0.5",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.0",
     "fake-indexeddb": "^6.2.5",
     "prisma": "^6.4.1",
     "rimraf": "^6.1.3",
