@@ -71,6 +71,7 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "react-persian-range-picker": "^1.1.2",
     "vite": "^8.3.0"
   },
   "devDependencies": {
