@@ -44,6 +44,14 @@ export const TaskListView: React.FC = () => {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Bulk Delete State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -116,6 +124,50 @@ export const TaskListView: React.FC = () => {
     }
   };
 
+
+  const handleBulkDelete = async () => {
+    if (selectedTaskIds.size === 0 || isBulkDeleting) return;
+
+    setIsBulkDeleting(true);
+    setActionError(null);
+
+    try {
+      const taskIds = Array.from(selectedTaskIds);
+      const failedTaskIds = new Set<string>();
+
+      // Delete sequentially so failures can be tracked individually.
+      for (const id of taskIds) {
+        try {
+          await application.tasks.deleteTask(id);
+        } catch {
+          failedTaskIds.add(id);
+        }
+      }
+
+      setSelectedTaskIds(failedTaskIds);
+
+      if (failedTaskIds.size === 0) {
+        setIsSelectionMode(false);
+        setShowBulkDeleteConfirm(false);
+      }
+
+      await loadData();
+
+      if (failedTaskIds.size > 0) {
+        setActionError(
+          `${failedTaskIds.size} task(s) could not be deleted.`
+        );
+      }
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Bulk deletion failed."
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+
   const roadmapMap = new Map(roadmaps.map((r) => [r.id, r]));
 
   const filteredTasks = tasks.filter((t) => {
@@ -125,6 +177,35 @@ export const TaskListView: React.FC = () => {
     return true;
   });
 
+  const toggleTaskSelection = (taskId: string) => {
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allFilteredSelected =
+      filteredTasks.length > 0 &&
+      filteredTasks.every((task) => selectedTaskIds.has(task.id));
+
+    setSelectedTaskIds((prev) => {
+      const next = new Set(prev);
+
+      if (allFilteredSelected) {
+        filteredTasks.forEach((task) => next.delete(task.id));
+      } else {
+        filteredTasks.forEach((task) => next.add(task.id));
+      }
+
+      return next;
+    });
+  };
   const activeCount = tasks.filter((t) => t.status !== 'cancelled' && t.status !== 'completed').length;
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
   const totalEstimated = tasks.reduce((sum, t) => sum + t.estimatedMinutes, 0);
@@ -147,19 +228,31 @@ export const TaskListView: React.FC = () => {
           </p>
         </div>
 
-        {roadmaps.length > 0 && (
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {roadmaps.length > 0 && (
+            <button
+              id="btn-create-task-from-roadmap-nav"
+              onClick={() => {
+                navigate('roadmaps', { id: roadmaps[0].id });
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs hover:bg-neutral-800 dark:hover:bg-neutral-100 transition cursor-pointer"
+            >
+              <MapPin className="w-4 h-4 text-emerald-500" />
+              <span>{t('manageViaRoadmapsButton')}</span>
+            </button>
+          )}
+
           <button
-            id="btn-create-task-from-roadmap-nav"
+            type="button"
             onClick={() => {
-              // Navigate to the first roadmap or user's choice
-              navigate('roadmaps', { id: roadmaps[0].id });
+              setIsSelectionMode((prev) => !prev);
+              setSelectedTaskIds(new Set());
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs hover:bg-neutral-800 dark:hover:bg-neutral-100 transition cursor-pointer self-start sm:self-auto"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
           >
-            <MapPin className="w-4 h-4 text-emerald-500" />
-            <span>{t('manageViaRoadmapsButton')}</span>
+            {isSelectionMode ? t('cancelSelection') : t('selectTasks')}
           </button>
-        )}
+        </div>
       </div>
 
       {actionError && (
@@ -230,11 +323,10 @@ export const TaskListView: React.FC = () => {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-2.5 py-1 rounded-md transition cursor-pointer capitalize font-medium ${
-                  statusFilter === s
-                    ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-2xs'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
-                }`}
+                className={`px-2.5 py-1 rounded-md transition cursor-pointer capitalize font-medium ${statusFilter === s
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-2xs'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                  }`}
               >
                 {translateStatus(s, lang)}
               </button>
@@ -275,6 +367,36 @@ export const TaskListView: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {isSelectionMode && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-200 dark:border-blue-900 p-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              {filteredTasks.length > 0 &&
+                filteredTasks.every((task) => selectedTaskIds.has(task.id))
+                ? 'لغو انتخاب همه'
+                : 'انتخاب همه'}
+            </button>
+
+            <span className="text-sm text-neutral-500">
+              {selectedTaskIds.size} وظیفه انتخاب شده
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowBulkDeleteConfirm(true)}
+            disabled={selectedTaskIds.size === 0 || isBulkDeleting}
+            className="rounded-md bg-rose-600 px-3 py-2 text-sm text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isBulkDeleting ? 'در حال حذف...' : 'حذف وظایف انتخاب‌شده'}
+          </button>
         </div>
       )}
 
@@ -325,6 +447,9 @@ export const TaskListView: React.FC = () => {
                   onStatusChange={handleStatusChange}
                   onEdit={handleOpenEdit}
                   onDelete={(t) => setTaskToDelete(t)}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedTaskIds.has(task.id)}
+                  onToggleSelection={toggleTaskSelection}
                 />
               </div>
             );
@@ -387,6 +512,59 @@ export const TaskListView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowBulkDeleteConfirm(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-title"
+            className="w-full max-w-md space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="bulk-delete-title"
+              className="text-base font-semibold text-neutral-900 dark:text-neutral-100"
+            >
+              {t('deleteTaskTitle')}
+            </h3>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              {t('bulkDeleteConfirm')}
+            </p>
+
+            <p className="text-sm font-medium">
+              {selectedTaskIds.size} {t('selectedTasksCount')}
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="rounded-lg px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                {t('cancel')}
+              </button>
+
+              <button
+                type="button"
+                disabled={isBulkDeleting}
+                onClick={handleBulkDelete}
+                className="rounded-lg bg-rose-600 px-3 py-2 text-sm text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {isBulkDeleting
+                  ? t('deletingTasks')
+                  : t('confirmDeleteAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -26,6 +26,9 @@ export interface TaskCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onSelect: (task: Task) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (taskId: string) => void;
 }
 
 export const getPriorityBadge = (priority: TaskPriority, lang: Language = 'en') => {
@@ -96,6 +99,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onEdit,
   onDelete,
   onSelect,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelection,
 }) => {
   const { preferences } = useUserPreferences();
   const lang = preferences.language;
@@ -130,16 +136,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:border-neutral-300 dark:hover:border-neutral-700 transition cursor-pointer"
     >
       <div className="flex items-start gap-3 min-w-0 flex-1">
+
+        {isSelectionMode && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelection?.(task.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select task: ${task.title}`}
+            className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
+          />
+        )}
+
         {/* Quick Checkbox / Status Circle */}
         <button
           id={`btn-toggle-task-${task.id}`}
           onClick={handleQuickToggleCompletion}
           title={task.status === 'completed' ? t('reopenTaskTitle') : t('markAsCompletedTitle')}
-          className={`shrink-0 mt-0.5 p-1 rounded-md transition cursor-pointer ${
-            task.status === 'completed'
-              ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
-              : 'text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400'
-          }`}
+          className={`shrink-0 mt-0.5 p-1 rounded-md transition cursor-pointer ${task.status === 'completed'
+            ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
+            : 'text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+            }`}
         >
           {task.status === 'completed' ? (
             <CheckCircle2 className="w-5 h-5 fill-emerald-100 dark:fill-emerald-950/80" />
@@ -153,11 +170,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span
               id={`task-title-${task.id}`}
-              className={`text-sm font-semibold tracking-tight transition ${
-                task.status === 'completed'
-                  ? 'line-through text-neutral-400 dark:text-neutral-500'
-                  : 'text-neutral-900 dark:text-neutral-100'
-              }`}
+              className={`text-sm font-semibold tracking-tight transition ${task.status === 'completed'
+                ? 'line-through text-neutral-400 dark:text-neutral-500'
+                : 'text-neutral-900 dark:text-neutral-100'
+                }`}
             >
               {task.title}
             </span>
