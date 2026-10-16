@@ -4,6 +4,8 @@ import { useRouter } from '../../app/providers/RouterProvider';
 import { Goal, GoalStatus, Roadmap } from '../../domain';
 import { GoalDetailedProgress } from '../../domain/services/progressReview';
 import { useUserPreferences, getTranslation, translateStatus } from '../../app/preferences';
+import { FileUp } from 'lucide-react';
+import { MarkdownImportModal } from './MarkdownImportModal';
 import {
   Target,
   Plus,
@@ -40,6 +42,7 @@ export const GoalListView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [isMarkdownImportOpen, setIsMarkdownImportOpen] = useState(false);
 
   // Delete Confirmation State
   const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null);
@@ -192,6 +195,7 @@ export const GoalListView: React.FC = () => {
           </p>
         </div>
 
+
         <div className="flex items-center gap-3">
           <button
             id="btn-create-goal-top"
@@ -201,7 +205,18 @@ export const GoalListView: React.FC = () => {
             <Plus className="w-4 h-4" />
             <span>{t('newGoalButton')}</span>
           </button>
+
+          <button
+            id="btn-import-markdown"
+            type="button"
+            onClick={() => setIsMarkdownImportOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition"
+          >
+            <FileUp className="w-4 h-4" />
+            <span>{t('markdownImportAction')}</span>
+          </button>
         </div>
+
       </div>
 
       {actionError && (
@@ -225,11 +240,10 @@ export const GoalListView: React.FC = () => {
                 key={st}
                 id={`filter-goal-${st}`}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
-                  statusFilter === st
-                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                }`}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${statusFilter === st
+                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  }`}
               >
                 {translateStatus(st, lang)}
               </button>
@@ -402,6 +416,16 @@ export const GoalListView: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={modalMode === 'create' ? handleCreateGoal : handleEditGoal}
       />
+
+
+      {/* Markdown Import Modal */}
+      {isMarkdownImportOpen && (
+        <MarkdownImportModal
+          onClose={() => setIsMarkdownImportOpen(false)}
+          onImported={loadData}
+        />
+      )}
+
 
       {/* Delete Goal Confirmation Modal */}
       {goalToDelete && (
